@@ -315,7 +315,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     <img src="../../assets/images/logo.png" alt="Foodify Logo" class="logo-image">
     <div class="logo-text">
         <div class="brand">Foodify</div>
-        <div class="tagline">Recipes + Groceries E-Commerce</div>
+        <div class="tagline">okRecipes + Groceries E-Commerce</div>
         </div>
     </div>
 </div>
