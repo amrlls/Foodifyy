@@ -161,7 +161,17 @@ $icons = [
 
         .recipe-info { padding: 1.2rem; }
         .recipe-title { font-weight: 800; font-size: 1.1rem; margin-bottom: 0.4rem; color: var(--dark); }
-        .recipe-desc { font-size: 0.8rem; color: var(--muted); line-height: 1.5; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; margin-bottom: 0.8rem; }
+        .recipe-desc {
+            font-size: 0.8rem;
+            color: var(--muted);
+            line-height: 1.5;
+            display: -webkit-box;
+            -webkit-line-clamp: 2;
+            line-clamp: 2; /* <--- TAMBAH BARIS NI SAHAJA */
+            -webkit-box-orient: vertical;
+            overflow: hidden;
+            margin-bottom: 0.8rem;
+        }
         .recipe-footer { display: flex; align-items: center; justify-content: space-between; }
         .recipe-tag { background: var(--green-light); color: var(--green); font-size: 0.7rem; font-weight: 800; padding: 3px 12px; border-radius: 50px; }
         .recipe-time { font-size: 0.75rem; color: #aaa; font-weight: 600; }
