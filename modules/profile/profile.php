@@ -234,5 +234,88 @@
         </div>
     </div>
 </div>
+<script>
+    // Alert function for demo - teammates can replace with actual AJAX calls
+    function showAlert(message, type) {
+        const alertBox = document.getElementById('alertMessage');
+        const alertText = document.getElementById('alertText');
+        alertText.innerHTML = message;
+        alertBox.className = `alert alert-${type} alert-custom show`;
+        
+        // Auto hide after 4 seconds
+        setTimeout(() => {
+            alertBox.classList.remove('show');
+        }, 4000);
+        
+        // Scroll to top to show alert
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+    
+    // Profile Form Submit (Demo)
+    document.getElementById('profileForm').addEventListener('submit', function(e) {
+        e.preventDefault();
+        
+        const fullname = document.getElementById('fullname').value;
+        const email = document.getElementById('email').value;
+        
+        if (!fullname || !email) {
+            showAlert('Please fill in all required fields.', 'danger');
+            return;
+        }
+        
+        // Demo success message - teammates will replace with actual API call
+        showAlert('Profile updated successfully!', 'success');
+        
+        // Update sidebar name (demo)
+        document.querySelector('.user-name').innerHTML = fullname;
+        document.querySelector('.profile-title h1').innerHTML = fullname;
+    });
+    
+    // Password Form Submit (Demo)
+    document.getElementById('passwordForm').addEventListener('submit', function(e) {
+        e.preventDefault();
+        
+        const currentPwd = document.getElementById('currentPassword').value;
+        const newPwd = document.getElementById('newPassword').value;
+        const confirmPwd = document.getElementById('confirmPassword').value;
+        
+        if (!currentPwd) {
+            showAlert('Please enter your current password.', 'danger');
+            return;
+        }
+        
+        if (!newPwd) {
+            showAlert('Please enter a new password.', 'danger');
+            return;
+        }
+        
+        if (newPwd.length < 6) {
+            showAlert('New password must be at least 6 characters.', 'danger');
+            return;
+        }
+        
+        if (newPwd !== confirmPwd) {
+            showAlert('New passwords do not match.', 'danger');
+            return;
+        }
+        
+        // Demo validation for current password
+        if (currentPwd !== '123456') {
+            showAlert('Current password is incorrect.', 'danger');
+            return;
+        }
+        
+        // Demo success message - teammates will replace with actual API call
+        showAlert('Password updated successfully!', 'success');
+        
+        // Clear password fields
+        document.getElementById('currentPassword').value = '';
+        document.getElementById('newPassword').value = '';
+        document.getElementById('confirmPassword').value = '';
+    });
+    
+    // Mobile menu toggle (simple)
+    const sidebar = document.getElementById('sidebar');
+</script>
 </body>
 </html>
