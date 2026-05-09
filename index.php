@@ -3,10 +3,15 @@ session_start();
 require_once __DIR__ . '/config/database.php';
 
 $isLoggedIn = isset($_SESSION['user_id']);
+$userId     = $_SESSION['user_id'] ?? 0;
 $username   = $_SESSION['username'] ?? 'Guest';
 
-// 1. Ambil Resipi
-$sql_recipes = "SELECT * FROM recipes ORDER BY created_at DESC LIMIT 4";
+// 1. Ambil Resipi (Subquery untuk semak status saved)
+$sql_recipes = "SELECT r.*, 
+                (SELECT COUNT(*) FROM saved_recipes s WHERE s.recipe_id = r.recipe_id AND s.user_id = $userId) as is_saved 
+                FROM recipes r 
+                WHERE r.is_public = 1
+                ORDER BY r.created_at DESC LIMIT 4";
 $res_recipes = $conn->query($sql_recipes);
 $recipes = $res_recipes->fetch_all(MYSQLI_ASSOC);
 
@@ -70,22 +75,20 @@ $gradients = [
         .user-row {
             display: flex; align-items: center; gap: 10px; padding: 10px 14px;
             background: var(--green-light); border-radius: 12px; margin-bottom: 10px;
+            transition: all 0.2s ease-out; cursor: pointer;
         }
+        .user-row:hover { background-color: #DDEEE6 !important; transform: translateY(-3px); box-shadow: 0 4px 10px rgba(0, 0, 0, 0.05); }
         .user-row i { font-size: 1.6rem; color: var(--green); }
         .user-row .user-name { font-weight: 700; font-size: 0.88rem; }
         .user-row .user-role { font-size: 0.7rem; color: var(--muted); }
 
         .btn-side { display: block; padding: 9px; border-radius: 50px; font-weight: 700; font-size: 0.85rem; text-align: center; text-decoration: none; margin-bottom: 6px; }
         .btn-side-login { background: var(--orange); color: white; }
-        .btn-side-logout { background: #FEE2E2; color: #DC2626; }
-        .btn-side-logout:hover { 
-            background: #DC2626; /* Tukar jadi merah pekat */
-            color: white;        /* Tulisan tukar jadi putih */
-        }
+        .btn-side-logout { background: #FEE2E2; color: #DC2626; transition: 0.2s; }
+        .btn-side-logout:hover { background: #DC2626; color: white; }
 
         /* ── MAIN CONTENT ── */
         .main-content { margin-left: var(--sidebar-w); padding: 2.5rem; }
-
         .hero-banner {
             background: linear-gradient(135deg, var(--green) 0%, #3E9B4E 100%);
             border-radius: 24px; padding: 3.5rem; color: white; margin-bottom: 3rem;
@@ -102,16 +105,15 @@ $gradients = [
         .recipe-img-box img { width: 100%; height: 100%; object-fit: cover; }
         .recipe-info { padding: 1rem; flex: 1; display: flex; flex-direction: column; justify-content: center; }
         
-        /* SAVED ICON (HEART) - Baru ditambahkan */
         .btn-save-recipe {
             position: absolute; top: 10px; left: 10px; z-index: 10;
-            background: white; border: none; width: 30px; height: 30px;
+            background: white; border: none; width: 32px; height: 32px;
             border-radius: 50%; display: flex; align-items: center; justify-content: center;
             box-shadow: 0 3px 6px rgba(0,0,0,0.15); color: #ccc; transition: 0.2s; cursor: pointer;
         }
         .btn-save-recipe:hover { transform: scale(1.1); color: #ff4757; }
         .btn-save-recipe.active { color: #ff4757; }
-        .btn-save-recipe.active i::before { content: "\f415"; } /* Tukar bi-heart kepada bi-heart-fill */
+        .btn-save-recipe.active i::before { content: "\f415"; } /* bi-heart-fill */
 
         /* ── GROCERY ITEM CARD ── */
         .section-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem; }
@@ -124,7 +126,6 @@ $gradients = [
             align-items: center; height: 100%; border: 1px solid transparent; transition: 0.2s;
         }
         .grocery-item-card:hover { border-color: var(--green); }
-        
         .item-icon-circle {
             width: 55px; height: 55px; background: #f0f9f1; border-radius: 16px;
             display: flex; align-items: center; justify-content: center; margin-bottom: 0.8rem;
@@ -132,14 +133,12 @@ $gradients = [
         .item-icon-circle i { font-size: 1.5rem; color: #2E7D32; }
         .grocery-item-card h6 { font-weight: 800; font-size: 0.9rem; margin-bottom: 5px; color: var(--dark); }
         .item-price { color: var(--orange); font-weight: 800; font-size: 1rem; margin-bottom: 0.8rem; }
-        
         .btn-add-cart {
             background: #2E7D32; color: white; border: none; width: 100%;
             padding: 8px; border-radius: 12px; font-weight: 700; font-size: 0.75rem;
             transition: 0.2s; margin-top: auto;
         }
 
-        /* Floating Cart */
         .cart-float {
             position: fixed; bottom: 30px; right: 30px;
             background: var(--orange); width: 65px; height: 65px;
@@ -151,30 +150,6 @@ $gradients = [
             position: absolute; top: 0; right: 0; background: #1a1a1a;
             color: white; width: 24px; height: 24px; border-radius: 50%;
             font-size: 0.75rem; display: flex; align-items: center; justify-content: center; font-weight: 800;
-        }
-        .user-row {
-            display: flex;
-            align-items: center;
-            gap: 10px;
-            padding: 10px 14px;
-            background: var(--green-light);
-            border-radius: 12px;
-            margin-bottom: 10px;
-            cursor: pointer;
-            /* Transition untuk nampak smooth masa "melompat" naik */
-            transition: all 0.2s ease-out;
-        }
-
-        /* Float ke atas sebanyak 3px sahaja */
-        .user-row:hover {
-            background-color: #DDEEE6 !important; 
-            transform: translateY(-3px); 
-            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.05); /* Tambah bayang halus */
-        }
-
-        /* Kesan bila klik */
-        .user-row:active {
-            transform: translateY(-1px); /* Turun sikit balik masa tekan */
         }
     </style>
 </head>
@@ -200,7 +175,7 @@ $gradients = [
     <div class="sidebar-bottom">
     <?php if ($isLoggedIn): ?>
         <a href="modules/auth/profile.php" class="text-decoration-none" style="color: inherit;">
-            <div class="user-row" style="cursor: pointer; transition: 0.2s;">
+            <div class="user-row">
                 <i class="bi bi-person-circle"></i>
                 <div>
                     <div class="user-name"><?= htmlspecialchars($username) ?></div>
@@ -229,13 +204,16 @@ $gradients = [
             </div>
             <?php foreach ($recipes as $r): 
                 $grad = $gradients[$r['cuisine']] ?? 'var(--green)';
+                $activeClass = ($r['is_saved'] > 0) ? 'active' : '';
             ?>
+            
             <div style="position: relative;">
-                <button class="btn-save-recipe" onclick="toggleSave(event, <?= $r['id'] ?>)">
+                <button class="btn-save-recipe <?= $activeClass ?>" onclick="toggleSave(event, <?= $r['recipe_id'] ?>)">
                     <i class="bi bi-heart"></i>
                 </button>
 
-                <a href="modules/recipe/detail.php?id=<?= $r['id'] ?>" class="recipe-card">
+                <!-- LINK DIUBAH KE recipedetail.php DENGAN PARAMETER ?id= -->
+                <a href="modules/recipe/recipedetail.php?id=<?= $r['recipe_id'] ?>" class="recipe-card">
                     <div class="recipe-img-box" style="background: <?= $grad ?>;">
                         <?php if($r['image']): ?>
                             <img src="assets/images/recipes/<?= $r['image'] ?>" alt="">
@@ -294,30 +272,38 @@ $gradients = [
 <script>
     const isLoggedIn = <?= $isLoggedIn ? 'true' : 'false' ?>;
     
-    // Fungsi Toggle Save (Heart)
-    function toggleSave(event, recipeId) {
+    async function toggleSave(event, recipeId) {
         event.preventDefault(); 
         event.stopPropagation();
-        const btn = event.currentTarget;
-        btn.classList.toggle('active');
-        
-        let saved = JSON.parse(localStorage.getItem('saved_recipes') || '[]');
-        if (btn.classList.contains('active')) {
-            if(!saved.includes(recipeId)) saved.push(recipeId);
-        } else {
-            saved = saved.filter(id => id !== recipeId);
-        }
-        localStorage.setItem('saved_recipes', JSON.stringify(saved));
-    }
 
-    // Kekalkan state butang heart semasa page load
-    document.addEventListener('DOMContentLoaded', () => {
-        let saved = JSON.parse(localStorage.getItem('saved_recipes') || '[]');
-        document.querySelectorAll('.btn-save-recipe').forEach(btn => {
-            const id = parseInt(btn.getAttribute('onclick').match(/\d+/)[0]);
-            if(saved.includes(id)) btn.classList.add('active');
-        });
-    });
+        if (!isLoggedIn) {
+            alert("Sila log masuk untuk menyimpan resipi.");
+            window.location.href = 'modules/auth/login.php';
+            return;
+        }
+
+        const btn = event.currentTarget;
+
+        try {
+            const formData = new FormData();
+            formData.append('recipe_id', recipeId);
+
+            const response = await fetch('modules/recipe/toggle_save.php', {
+                method: 'POST',
+                body: formData
+            });
+
+            const data = await response.json();
+
+            if (data.status === 'saved') {
+                btn.classList.add('active');
+            } else if (data.status === 'removed') {
+                btn.classList.remove('active');
+            }
+        } catch (error) {
+            console.error('Error:', error);
+        }
+    }
 
     function requireLogin(e, type) {
         if (!isLoggedIn) {
@@ -325,9 +311,7 @@ $gradients = [
             alert("Sila log masuk untuk menggunakan fungsi ini.");
             window.location.href = 'modules/auth/login.php';
         } else {
-            if(type === 'shop') {
-                alert("Ditambah ke troli!");
-            }
+            if(type === 'shop') alert("Ditambah ke troli!");
         }
     }
 </script>
