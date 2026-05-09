@@ -11,7 +11,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if (!$email || !$password) {
         $error = 'Please fill in all fields.';
     } else {
-        $stmt = $conn->prepare("SELECT id, username, password, role FROM users WHERE email = ?");
+        $stmt = $conn->prepare("SELECT user_id, username, password, role FROM users WHERE email = ?");
         $stmt->bind_param("s", $email);
         $stmt->execute();
         $stmt->store_result();
@@ -19,17 +19,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         if ($stmt->num_rows === 0) {
             $error = 'Email not found.';
         } else {
-            $id       = '';
+            $user_id       = '';
             $username = '';
             $hashed   = '';
             $role     = '';
-            $stmt->bind_result($id, $username, $hashed, $role);
+            $stmt->bind_result($user_id, $username, $hashed, $role);
             $stmt->fetch();
 
             if (!password_verify($password, $hashed)) {
                 $error = 'Wrong password.';
             } else {
-                $_SESSION['user_id']  = $id;
+                $_SESSION['user_id']  = $user_id;
                 $_SESSION['username'] = $username;
                 $_SESSION['role']     = $role;
 
@@ -196,6 +196,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             box-shadow: 0 0 0 4px rgba(255,107,0,0.08);
         }
         .eye-toggle {
+
             position: absolute;
             right: 0;
             top: 0; bottom: 0;

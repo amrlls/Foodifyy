@@ -231,11 +231,11 @@ $gradients = [
                 $grad = $gradients[$r['cuisine']] ?? 'var(--green)';
             ?>
             <div style="position: relative;">
-                <button class="btn-save-recipe" onclick="toggleSave(event, <?= $r['id'] ?>)">
+                <button class="btn-save-recipe" onclick="toggleSave(event, <?= $r['recipe_id'] ?>)">
                     <i class="bi bi-heart"></i>
                 </button>
 
-                <a href="modules/recipe/detail.php?id=<?= $r['id'] ?>" class="recipe-card">
+                <a href="modules/recipe/detail.php?recipe_id=<?= $r['recipe_id'] ?>" class="recipe-card">
                     <div class="recipe-img-box" style="background: <?= $grad ?>;">
                         <?php if($r['image']): ?>
                             <img src="assets/images/recipes/<?= $r['image'] ?>" alt="">
@@ -305,7 +305,7 @@ $gradients = [
         if (btn.classList.contains('active')) {
             if(!saved.includes(recipeId)) saved.push(recipeId);
         } else {
-            saved = saved.filter(id => id !== recipeId);
+            saved = saved.filter(recipe_id => recipe_id !== recipeId);
         }
         localStorage.setItem('saved_recipes', JSON.stringify(saved));
     }
@@ -314,8 +314,8 @@ $gradients = [
     document.addEventListener('DOMContentLoaded', () => {
         let saved = JSON.parse(localStorage.getItem('saved_recipes') || '[]');
         document.querySelectorAll('.btn-save-recipe').forEach(btn => {
-            const id = parseInt(btn.getAttribute('onclick').match(/\d+/)[0]);
-            if(saved.includes(id)) btn.classList.add('active');
+            const recipe_id = parseInt(btn.getAttribute('onclick').match(/\d+/)[0]);
+            if(saved.includes(recipe_id)) btn.classList.add('active');
         });
     });
 
