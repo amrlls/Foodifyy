@@ -1,9 +1,10 @@
 <?php
 session_start();
-// Path database disesuaikan untuk keluar dari modules/recipe/ ke root
+
 require_once __DIR__ . '/../../config/database.php';
 
 $isLoggedIn = isset($_SESSION['user_id']);
+$userId     = $_SESSION['user_id'] ?? 0;
 $username   = $_SESSION['username'] ?? 'Guest';
 
 // Get filters from URL
@@ -11,7 +12,8 @@ $meal_type = $_GET['meal_type'] ?? 'all';
 $cuisine   = $_GET['cuisine']   ?? 'all';
 $search    = trim($_GET['search'] ?? '');
 
-// Build query
+// Build query 
+// Ditambah subquery: (SELECT COUNT(*) FROM saved_recipes...) as is_saved
 $where  = ["is_public = 1"];
 $params = [];
 $types  = '';
@@ -36,18 +38,26 @@ if ($search !== '') {
 }
 
 $whereSQL = implode(' AND ', $where);
-$sql       = "SELECT * FROM recipes WHERE $whereSQL ORDER BY created_at DESC";
+
+// Query utama yang telah dikemaskini dengan status is_saved
+$sql = "SELECT r.*, 
+        (SELECT COUNT(*) FROM saved_recipes s WHERE s.recipe_id = r.recipe_id AND s.user_id = ?) as is_saved 
+        FROM recipes r WHERE $whereSQL ORDER BY created_at DESC";
+
+// Tambah userId sebagai parameter pertama untuk subquery
+$allParams = array_merge([$userId], $params);
+$allTypes  = 'i' . $types;
 
 $stmt = $conn->prepare($sql);
-if (!empty($params)) {
-    $stmt->bind_param($types, ...$params);
+if (!empty($allParams)) {
+    $stmt->bind_param($allTypes, ...$allParams);
 }
 $stmt->execute();
 $result  = $stmt->get_result();
 $recipes = $result->fetch_all(MYSQLI_ASSOC);
 $count   = count($recipes);
 
-// Gradient colours per cuisine (Sama macam index.php)
+// Gradient colours per cuisine
 $gradients = [
     'Melayu'  => 'linear-gradient(135deg, #2E7D32, #9FA825)',
     'Western' => 'linear-gradient(135deg, #c0392b, #e74c3c)',
@@ -82,7 +92,7 @@ $icons = [
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body { font-family: 'Nunito', sans-serif; background: #F7F9F7; color: var(--dark); }
 
-        /* ── SIDEBAR (SAMA MACAM INDEX) ── */
+        /* ── SIDEBAR ── */
         .sidebar {
             position: fixed; left: 0; top: 0; width: var(--sidebar-w); height: 100vh;
             background: white; box-shadow: 2px 0 16px rgba(0,0,0,0.06);
@@ -167,7 +177,7 @@ $icons = [
             line-height: 1.5;
             display: -webkit-box;
             -webkit-line-clamp: 2;
-            line-clamp: 2; /* <--- TAMBAH BARIS NI SAHAJA */
+            line-clamp: 2;
             -webkit-box-orient: vertical;
             overflow: hidden;
             margin-bottom: 0.8rem;
@@ -268,13 +278,14 @@ $icons = [
         <?php foreach ($recipes as $recipe): 
             $grad = $gradients[$recipe['cuisine']] ?? 'linear-gradient(135deg, #2E7D32, #9FA825)';
             $icon = $icons[$recipe['meal_type']] ?? 'bi-egg-fried';
+            $savedActive = ($recipe['is_saved'] > 0) ? 'active' : '';
         ?>
             <div class="recipe-card">
-                <button class="btn-save-recipe" onclick="toggleSave(event, <?= $recipe['id'] ?>)">
+                <button class="btn-save-recipe <?= $savedActive ?>" onclick="toggleSave(event, <?= $recipe['recipe_id'] ?>)">
                     <i class="bi bi-heart"></i>
                 </button>
 
-                <a href="detail.php?id=<?= $recipe['id'] ?>" class="text-decoration-none" style="color:inherit;">
+                <a href="detail.php?id=<?= $recipe['recipe_id'] ?>" class="text-decoration-none" style="color:inherit;">
                     <div class="recipe-img" style="background: <?= $grad ?>;">
                         <?php if ($recipe['image']): ?>
                             <img src="../../assets/images/recipes/<?= htmlspecialchars($recipe['image']) ?>" alt="">
@@ -298,32 +309,41 @@ $icons = [
 </div>
 
 <script>
-    // System Heart Save (Sama macam index.php)
-    function toggleSave(event, recipeId) {
+    const isLoggedIn = <?= $isLoggedIn ? 'true' : 'false' ?>;
+
+    async function toggleSave(event, recipeId) {
         event.preventDefault(); 
         event.stopPropagation();
-        const btn = event.currentTarget;
-        btn.classList.toggle('active');
-        
-        let saved = JSON.parse(localStorage.getItem('saved_recipes') || '[]');
-        if (btn.classList.contains('active')) {
-            if(!saved.includes(recipeId)) saved.push(recipeId);
-        } else {
-            saved = saved.filter(id => id !== recipeId);
-        }
-        localStorage.setItem('saved_recipes', JSON.stringify(saved));
-    }
 
-    document.addEventListener('DOMContentLoaded', () => {
-        let saved = JSON.parse(localStorage.getItem('saved_recipes') || '[]');
-        document.querySelectorAll('.btn-save-recipe').forEach(btn => {
-            const onclickAttr = btn.getAttribute('onclick');
-            const idMatch = onclickAttr.match(/\d+/);
-            if(idMatch && saved.includes(parseInt(idMatch[0]))) {
+        if (!isLoggedIn) {
+            alert("Sila log masuk untuk menyimpan resipi.");
+            window.location.href = '../auth/login.php';
+            return;
+        }
+
+        const btn = event.currentTarget;
+
+        try {
+            const formData = new FormData();
+            formData.append('recipe_id', recipeId);
+
+            // AJAX ke toggle_save.php
+            const response = await fetch('toggle_save.php', {
+                method: 'POST',
+                body: formData
+            });
+
+            const data = await response.json();
+
+            if (data.status === 'saved') {
                 btn.classList.add('active');
+            } else if (data.status === 'removed') {
+                btn.classList.remove('active');
             }
-        });
-    });
+        } catch (error) {
+            console.error('Error:', error);
+        }
+    }
 
     // Auto submit search
     const searchInput = document.getElementById('searchInput');
