@@ -285,7 +285,7 @@ $icons = [
                     <i class="bi bi-heart"></i>
                 </button>
 
-                <a href="detail.php?id=<?= $recipe['recipe_id'] ?>" class="text-decoration-none" style="color:inherit;">
+                <a href="recipedetail.php?id=<?= $recipe['recipe_id'] ?>" class="text-decoration-none" style="color:inherit;">
                     <div class="recipe-img" style="background: <?= $grad ?>;">
                         <?php if ($recipe['image']): ?>
                             <img src="../../assets/images/recipes/<?= htmlspecialchars($recipe['image']) ?>" alt="">

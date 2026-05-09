@@ -10,6 +10,7 @@ $username   = $_SESSION['username'] ?? 'Guest';
 $sql_recipes = "SELECT r.*, 
                 (SELECT COUNT(*) FROM saved_recipes s WHERE s.recipe_id = r.recipe_id AND s.user_id = $userId) as is_saved 
                 FROM recipes r 
+                WHERE r.is_public = 1
                 ORDER BY r.created_at DESC LIMIT 4";
 $res_recipes = $conn->query($sql_recipes);
 $recipes = $res_recipes->fetch_all(MYSQLI_ASSOC);
@@ -205,12 +206,14 @@ $gradients = [
                 $grad = $gradients[$r['cuisine']] ?? 'var(--green)';
                 $activeClass = ($r['is_saved'] > 0) ? 'active' : '';
             ?>
+            
             <div style="position: relative;">
                 <button class="btn-save-recipe <?= $activeClass ?>" onclick="toggleSave(event, <?= $r['recipe_id'] ?>)">
                     <i class="bi bi-heart"></i>
                 </button>
 
-                <a href="modules/recipe/detail.php?recipe_id=<?= $r['recipe_id'] ?>" class="recipe-card">
+                <!-- LINK DIUBAH KE recipedetail.php DENGAN PARAMETER ?id= -->
+                <a href="modules/recipe/recipedetail.php?id=<?= $r['recipe_id'] ?>" class="recipe-card">
                     <div class="recipe-img-box" style="background: <?= $grad ?>;">
                         <?php if($r['image']): ?>
                             <img src="assets/images/recipes/<?= $r['image'] ?>" alt="">
@@ -285,7 +288,6 @@ $gradients = [
             const formData = new FormData();
             formData.append('recipe_id', recipeId);
 
-            // DIUBAH: Path ke modules/recipe/toggle_save.php
             const response = await fetch('modules/recipe/toggle_save.php', {
                 method: 'POST',
                 body: formData
