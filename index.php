@@ -4,7 +4,25 @@ require_once __DIR__ . '/config/database.php';
 
 $isLoggedIn = isset($_SESSION['user_id']);
 $userId     = $_SESSION['user_id'] ?? 0;
-$username   = $_SESSION['username'] ?? 'Guest';
+
+// --- TAMBAHAN BARU DI SINI ---
+$nav_profile_img = "";
+$nav_role = "Customer";
+$username = 'Guest';
+
+if ($isLoggedIn) {
+    $stmt_nav = $conn->prepare("SELECT username, profile_image, role FROM users WHERE user_id = ?");
+    $stmt_nav->bind_param("i", $userId);
+    $stmt_nav->execute();
+    $user_nav = $stmt_nav->get_result()->fetch_assoc();
+    
+    if ($user_nav) {
+        $username = $user_nav['username'];
+        $nav_profile_img = $user_nav['profile_image'];
+        $nav_role = $user_nav['role'];
+    }
+}
+// ----------------------------
 
 // 1. Ambil Resipi (Subquery untuk semak status saved)
 $sql_recipes = "SELECT r.*, 
@@ -79,6 +97,12 @@ $gradients = [
         }
         .user-row:hover { background-color: #DDEEE6 !important; transform: translateY(-3px); box-shadow: 0 4px 10px rgba(0, 0, 0, 0.05); }
         .user-row i { font-size: 1.6rem; color: var(--green); }
+        .user-avatar-img { 
+            width: 35px; 
+            height: 35px; 
+            border-radius: 50%; 
+            object-fit: cover; 
+        }
         .user-row .user-name { font-weight: 700; font-size: 0.88rem; }
         .user-row .user-role { font-size: 0.7rem; color: var(--muted); }
 
@@ -168,18 +192,23 @@ $gradients = [
         <li><a href="modules/recipe/recipes.php"><i class="bi bi-journal-bookmark-fill"></i> Recipes</a></li>
         <li><a href="modules/shop/index.php"><i class="bi bi-bag-fill"></i> Shop</a></li>
         <?php if ($isLoggedIn): ?>
-            <li><a href="modules/recipe/collection.php"><i class="bi bi-bookmark-heart-fill"></i> My Cookbooks</a></li>
+            <li><a href="modules/recipe/cookbook.php"><i class="bi bi-bookmark-heart-fill"></i> My Cookbooks</a></li>
             <li><a href="modules/order/index.php"><i class="bi bi-truck"></i> My Orders</a></li>
         <?php endif; ?>
     </ul>
     <div class="sidebar-bottom">
     <?php if ($isLoggedIn): ?>
-        <a href="modules/auth/profile.php" class="text-decoration-none" style="color: inherit;">
+        <a href="modules/profile/profile.php" class="text-decoration-none" style="color: inherit;">
             <div class="user-row">
-                <i class="bi bi-person-circle"></i>
+                <?php if (!empty($nav_profile_img) && file_exists("assets/images/profiles/" . $nav_profile_img)): ?>
+                    <img src="assets/images/profiles/<?= htmlspecialchars($nav_profile_img) ?>" class="user-avatar-img">
+                <?php else: ?>
+                    <i class="bi bi-person-circle"></i>
+                <?php endif; ?>
+                
                 <div>
                     <div class="user-name"><?= htmlspecialchars($username) ?></div>
-                    <div class="user-role"><?= htmlspecialchars($_SESSION['role'] ?? 'Customer') ?></div>
+                    <div class="user-role"><?= htmlspecialchars($nav_role) ?></div>
                 </div>
             </div>
         </a>

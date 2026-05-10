@@ -152,7 +152,7 @@ $grad = $gradients[$recipe['cuisine']] ?? 'linear-gradient(135deg, #2E7D32, #9FA
     </ul>
     <div class="sidebar-bottom">
         <?php if ($isLoggedIn): ?>
-            <a href="../auth/profile.php" class="text-decoration-none" style="color: inherit;">
+            <a href="../profile/profile.php" class="text-decoration-none" style="color: inherit;">
                 <div class="user-row">
                     <i class="bi bi-person-circle"></i>
                     <div>

@@ -5,7 +5,24 @@ require_once __DIR__ . '/../../config/database.php';
 
 $isLoggedIn = isset($_SESSION['user_id']);
 $userId     = $_SESSION['user_id'] ?? 0;
-$username   = $_SESSION['username'] ?? 'Guest';
+
+$nav_profile_img = "";
+$nav_role = "Customer";
+$username = 'Guest';
+
+if ($isLoggedIn) {
+    $stmt_nav = $conn->prepare("SELECT username, profile_image, role FROM users WHERE user_id = ?");
+    $stmt_nav->bind_param("i", $userId);
+    $stmt_nav->execute();
+    $user_nav = $stmt_nav->get_result()->fetch_assoc();
+    
+    if ($user_nav) {
+        $username = $user_nav['username'];
+        $nav_profile_img = $user_nav['profile_image'];
+        $nav_role = $user_nav['role'];
+    }
+}
+// ----------------------------
 
 // Get filters from URL
 $meal_type = $_GET['meal_type'] ?? 'all';
@@ -125,6 +142,13 @@ $icons = [
         }
         .user-row:hover { background-color: #DDEEE6 !important; transform: translateY(-3px); box-shadow: 0 4px 10px rgba(0,0,0,0.05); }
         .user-row i { font-size: 1.6rem; color: var(--green); }
+        .user-avatar-img { 
+            width: 35px; 
+            height: 35px; 
+            border-radius: 50%; 
+            object-fit: cover; 
+        }
+        
         .user-name { font-weight: 700; font-size: 0.88rem; }
         .user-role { font-size: 0.7rem; color: var(--muted); }
 
@@ -216,12 +240,21 @@ $icons = [
 
     <div class="sidebar-bottom">
         <?php if ($isLoggedIn): ?>
-            <a href="../auth/profile.php" class="text-decoration-none" style="color: inherit;">
-                <div class="user-row">
-                    <i class="bi bi-person-circle"></i>
+            <a href="../profile/profile.php" class="text-decoration-none" style="color: inherit;">
+               <div class="user-row">
+                    <?php 
+                    // Kita kena undur 2 folder ke belakang untuk jumpa folder assets
+                    $imgPath = "../../assets/images/profiles/" . $nav_profile_img;
+                    
+                    if (!empty($nav_profile_img) && file_exists($imgPath)): ?>
+                        <img src="<?= $imgPath ?>" class="user-avatar-img">
+                    <?php else: ?>
+                        <i class="bi bi-person-circle"></i>
+                    <?php endif; ?>
+                    
                     <div>
                         <div class="user-name"><?= htmlspecialchars($username) ?></div>
-                        <div class="user-role"><?= htmlspecialchars($_SESSION['role'] ?? 'Customer') ?></div>
+                        <div class="user-role"><?= htmlspecialchars($nav_role) ?></div>
                     </div>
                 </div>
             </a>

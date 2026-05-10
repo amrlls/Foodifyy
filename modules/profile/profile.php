@@ -1,26 +1,119 @@
+<?php
+session_start();
+require_once __DIR__ . '/../../config/database.php';
+
+// Check login
+if (!isset($_SESSION['user_id'])) {
+    header("Location: ../auth/login.php");
+    exit();
+}
+
+$userId = $_SESSION['user_id'];
+$status = ""; 
+
+// 1. Retrieve all User Information
+$stmt = $conn->prepare("SELECT * FROM users WHERE user_id = ?");
+$stmt->bind_param("i", $userId);
+$stmt->execute();
+$user = $stmt->get_result()->fetch_assoc();
+
+$username = $user['username'] ?? 'Guest';
+
+// 2. Logic: Update Profile (Fixed Address Saving)
+if (isset($_POST['update_profile'])) {
+    $fullname = $_POST['fullname'];
+    $email    = $_POST['email'];
+    $phone    = $_POST['phone'];
+    $address  = $_POST['address']; 
+    $profile_img = $user['profile_image']; 
+
+    // Handle Profile Picture Upload
+    // Handle Profile Picture Upload
+    if (isset($_FILES['profile_pic']) && $_FILES['profile_pic']['error'] == 0) {
+        $target_dir = "../../assets/images/profiles/";
+        if (!file_exists($target_dir)) { mkdir($target_dir, 0777, true); }
+        
+        $file_ext = pathinfo($_FILES["profile_pic"]["name"], PATHINFO_EXTENSION);
+        $new_filename = "user_" . $userId . "_" . time() . "." . $file_ext;
+
+        if (move_uploaded_file($_FILES["profile_pic"]["tmp_name"], $target_dir . $new_filename)) {
+            
+            // ─── LOGIK PADAM GAMBAR LAMA (TAMBAHAN) ───
+            // Cek kalau user ada gambar lama dalam DB dan fail tu wujud kat server
+            if (!empty($user['profile_image'])) {
+                $old_image_path = $target_dir . $user['profile_image'];
+                if (file_exists($old_image_path)) {
+                    unlink($old_image_path); // Padam fail lama
+                }
+            }
+            // ─────────────────────────────────────────
+
+            $profile_img = $new_filename;
+        }
+    }
+
+    // UPDATE DATABASE (Strictly include address)
+    $update = $conn->prepare("UPDATE users SET username = ?, email = ?, phone = ?, address = ?, profile_image = ? WHERE user_id = ?");
+    $update->bind_param("sssssi", $fullname, $email, $phone, $address, $profile_img, $userId);
+    
+    if ($update->execute()) {
+        $_SESSION['username'] = $fullname;
+        $status = "profile_success";
+        header("Refresh:0; url=profile.php?status=profile_success");
+        exit();
+    }
+}
+
+// 3. Logic: Update Password with Current Password Check
+if (isset($_POST['update_password'])) {
+    $current_pwd = $_POST['current_password'];
+    $new_pwd     = $_POST['new_password'];
+    $confirm_pwd = $_POST['confirm_password'];
+
+    // Verification against DB password
+    if (password_verify($current_pwd, $user['password'])) {
+        if ($new_pwd === $confirm_pwd) {
+            if (strlen($new_pwd) >= 6) {
+                $hashed_pwd = password_hash($new_pwd, PASSWORD_DEFAULT);
+                $upd_pwd = $conn->prepare("UPDATE users SET password = ? WHERE user_id = ?");
+                $upd_pwd->bind_param("si", $hashed_pwd, $userId);
+                if ($upd_pwd->execute()) {
+                    $status = "password_success";
+                }
+            } else {
+                $status = "password_short";
+            }
+        } else {
+            $status = "password_mismatch";
+        }
+    } else {
+        // Status for incorrect old password
+        $status = "current_pwd_wrong";
+    }
+}
+?>
 <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Profile</title>
+    <title>My Profile – Foodify</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
     <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800;900&family=Playfair+Display:wght@700;800&display=swap" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/sweetalert2@11/dist/sweetalert2.min.css" rel="stylesheet">
+    
     <style>
         :root {
-            --green: #2E7D32;
-            --green-light: #E8F5E9;
-            --orange: #FF8F00;
-            --dark: #1A1A1A;
-            --muted: #777;
-            --border: #EEEEEE;
+            --green: #2E7D32; --green-light: #E8F5E9;
+            --orange: #FF8F00; --dark: #1A1A1A;
+            --muted: #777; --border: #EEEEEE;
             --sidebar-w: 270px;
         }
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body { font-family: 'Nunito', sans-serif; background: #F7F9F7; color: var(--dark); }
 
-        /* Sidebar Styles */
+        /* ── SIDEBAR (LOCKED DESIGN) ── */
         .sidebar {
             position: fixed; left: 0; top: 0; width: var(--sidebar-w); height: 100vh;
             background: white; box-shadow: 2px 0 16px rgba(0,0,0,0.06);
@@ -53,269 +146,166 @@
         }
         .user-row:hover { background-color: #DDEEE6 !important; transform: translateY(-3px); box-shadow: 0 4px 10px rgba(0,0,0,0.05); }
         .user-row i { font-size: 1.6rem; color: var(--green); }
+        .user-avatar-img { width: 35px; height: 35px; border-radius: 50%; object-fit: cover; }
         .user-name { font-weight: 700; font-size: 0.88rem; }
         .user-role { font-size: 0.7rem; color: var(--muted); }
 
         .btn-side { display: block; padding: 9px; border-radius: 50px; font-weight: 700; font-size: 0.85rem; text-align: center; text-decoration: none; margin-bottom: 6px; transition: 0.2s; }
-        .btn-side-login { background: var(--orange); color: white; }
         .btn-side-logout { background: #FEE2E2; color: #DC2626; }
         .btn-side-logout:hover { background: #DC2626; color: white; }
 
-        /* Main Content */
+        /* ── MAIN CONTENT ── */
         .main-content { margin-left: var(--sidebar-w); padding: 2rem; min-height: 100vh; }
-        .top-bar h1 { font-family: 'Playfair Display', serif; font-size: 2.2rem; font-weight: 800; }
-
-        /* Profile Header */
-        .profile-header {
-            background: linear-gradient(135deg, var(--green) 0%, #3E9B4E 100%);
-            border-radius: 24px; padding: 2rem; color: white; margin-bottom: 2rem;
-            display: flex; align-items: center; gap: 2rem; flex-wrap: wrap;
-        }
-        .profile-avatar {
-            width: 90px; height: 90px; background: rgba(255,255,255,0.2);
-            border-radius: 50%; display: flex; align-items: center; justify-content: center;
-            font-size: 2.8rem; backdrop-filter: blur(4px);
-        }
-        .profile-title h1 { font-family: 'Playfair Display', serif; font-size: 1.6rem; font-weight: 800; margin-bottom: 0.25rem; }
-        .profile-title p { opacity: 0.9; font-size: 0.85rem; margin: 0; }
-
-        /* Profile Sections */
-        .profile-card {
-            background: white; border-radius: 24px; padding: 1.5rem; margin-bottom: 2rem;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.04); border: 1px solid var(--border);
-        }
-        .profile-card h3 {
-            font-weight: 800; font-size: 1.2rem; margin-bottom: 1.5rem;
-            display: flex; align-items: center; gap: 8px;
-            padding-bottom: 0.75rem; border-bottom: 2px solid var(--orange); display: inline-block;
-        }
-        .form-label { font-weight: 700; font-size: 0.8rem; color: var(--muted); margin-bottom: 0.4rem; }
-        .form-control, .form-select {
-            border-radius: 14px; padding: 12px 16px; border: 1.5px solid var(--border);
-            font-size: 0.9rem; transition: 0.2s;
-        }
-        .form-control:focus, .form-select:focus {
-            border-color: var(--orange); box-shadow: 0 0 0 3px rgba(255,143,0,0.1); outline: none;
-        }
-        .btn-save {
-            background: var(--orange); border: none; border-radius: 50px; padding: 12px 28px;
-            font-weight: 800; color: white; transition: 0.2s;
-        }
-        .btn-save:hover { background: #e07f00; transform: translateY(-2px); box-shadow: 0 4px 12px rgba(255,143,0,0.3); }
-        
-        .alert-custom {
-            border-radius: 16px; font-weight: 600; margin-bottom: 1.5rem;
-            display: none;
-        }
-        .alert-custom.show { display: block; }
-
-        @media (max-width: 768px) {
-            .sidebar { transform: translateX(-100%); transition: 0.3s; }
-            .sidebar.open { transform: translateX(0); }
-            .main-content { margin-left: 0; padding: 1rem; }
-            .profile-header { flex-direction: column; text-align: center; }
-        }
+        .profile-card { background: white; border-radius: 24px; padding: 2rem; box-shadow: 0 4px 12px rgba(0,0,0,0.04); margin-bottom: 2rem; border: 1.5px solid var(--border); }
+        .profile-display-img { width: 100px; height: 100px; border-radius: 50%; object-fit: cover; border: 3px solid var(--green-light); margin-bottom: 1rem; }
+        .form-label { font-weight: 700; color: var(--muted); font-size: 0.85rem; }
+        .form-control { border-radius: 12px; padding: 12px; border: 1.5px solid var(--border); }
+        .btn-primary-foodify { background: var(--orange); color: white; border: none; border-radius: 50px; padding: 12px 30px; font-weight: 800; transition: 0.2s; cursor: pointer; }
+        .btn-primary-foodify:hover { background: #e07f00; transform: translateY(-2px); }
     </style>
 </head>
 <body>
 
 <div class="sidebar" id="sidebar">
     <div class="sidebar-logo">
-        <img src="assets/images/logo.png" alt="Foodify">
+        <img src="../../assets/images/logo.png" alt="Foodify">
         <div class="logo-text">
             <h2>Foodify</h2>
             <span>Recipes + Groceries</span>
         </div>
     </div>
+    
     <ul class="sidebar-nav">
-        <li><a href="index.html"><i class="bi bi-house-fill"></i> Home</a></li>
-        <li><a href="recipes.html"><i class="bi bi-journal-bookmark-fill"></i> Recipes</a></li>
-        <li><a href="shop.html"><i class="bi bi-bag-fill"></i> Shop</a></li>
-        <li><a href="myCookbooks.html"><i class="bi bi-bookmark-heart-fill"></i> My Cookbooks</a></li>
-        <li><a href="myOrders.html"><i class="bi bi-truck"></i> My Orders</a></li>
+        <li><a href="../../index.php"><i class="bi bi-house-fill"></i> Home</a></li>
+        <li><a href="../recipe/recipes.php"><i class="bi bi-journal-bookmark-fill"></i> Recipes</a></li>
+        <li><a href="../shop/index.php"><i class="bi bi-bag-fill"></i> Shop</a></li>
+        <li><a href="../recipe/cookbook.php"><i class="bi bi-bookmark-heart-fill"></i> My Cookbooks</a></li>
+        <li><a href="../order/index.php"><i class="bi bi-truck"></i> My Orders</a></li>
     </ul>
+
     <div class="sidebar-bottom">
-        <a href="profile.html" class="text-decoration-none" style="color: inherit;">
-            <div class="user-row" style="background: #DDEEE6;">
-                <i class="bi bi-person-circle"></i>
+        <a href="profile.php" class="text-decoration-none" style="color: inherit;">
+            <div class="user-row" style="background-color: #DDEEE6; border: 1.5px solid var(--green);">
+                <?php if (!empty($user['profile_image'])): ?>
+                    <img src="../../assets/images/profiles/<?= htmlspecialchars($user['profile_image']) ?>" class="user-avatar-img">
+                <?php else: ?>
+                    <i class="bi bi-person-circle"></i>
+                <?php endif; ?>
                 <div>
-                    <div class="user-name">Name</div>
-                    <div class="user-role">Customer</div>
+                    <div class="user-name"><?= htmlspecialchars($username) ?></div>
+                    <div class="user-role"><?= htmlspecialchars($user['role'] ?? 'Customer') ?></div>
                 </div>
             </div>
         </a>
-        <a href="loginPage.html" class="btn-side btn-side-logout"><i class="bi bi-box-arrow-left"></i> Logout</a>
+        <a href="../auth/logout.php" class="btn-side btn-side-logout"><i class="bi bi-box-arrow-left"></i> Logout</a>
     </div>
 </div>
 
 <div class="main-content">
-    <!-- Profile Header -->
-    <div class="profile-header">
-        <div class="profile-avatar">
-            <i class="bi bi-person-circle"></i>
-        </div>
-        <div class="profile-title">
-            <h1>(Name)</h1>
-            <p><i class="bi bi-envelope"></i> name@foodify.com</p>
-        </div>
-    </div>
-
-    <!-- Alert Message (Hidden by default, shows after form submit) -->
-    <div class="alert alert-custom" id="alertMessage">
-        <i class="bi bi-check-circle-fill me-2"></i>
-        <span id="alertText">Profile updated successfully!</span>
+    <div class="mb-4 text-center text-lg-start">
+        <h1 style="font-family:'Playfair Display', serif; font-weight:800; font-size: 2.2rem;">My Profile</h1>
+        <p class="text-muted">Manage your account settings and preferences</p>
     </div>
 
     <div class="row g-4">
-        <!-- Personal Information Section -->
         <div class="col-lg-7">
-            <div class="profile-card">
-                <h3><i class="bi bi-person-badge" style="color: var(--orange);"></i> Personal Information</h3>
-                <form id="profileForm">
+            <div class="profile-card text-center text-lg-start">
+                <h5 class="fw-bold mb-4"><i class="bi bi-person-gear me-2 text-success"></i>Account Information</h5>
+                
+                <div class="mb-4 text-center">
+                    <?php if (!empty($user['profile_image'])): ?>
+                        <img src="../../assets/images/profiles/<?= htmlspecialchars($user['profile_image']) ?>" class="profile-display-img">
+                    <?php else: ?>
+                        <div class="mb-3"><i class="bi bi-person-circle" style="font-size: 80px; color: var(--green);"></i></div>
+                    <?php endif; ?>
+                </div>
+
+                <!-- Added ID to form for SweetAlert targeting -->
+                <form id="profileForm" method="POST" enctype="multipart/form-data">
+                    <div class="mb-3">
+                        <label class="form-label">Update Profile Picture</label>
+                        <input type="file" name="profile_pic" class="form-control" accept="image/*">
+                    </div>
                     <div class="mb-3">
                         <label class="form-label">Full Name</label>
-                        <input type="text" name="fullname" id="fullname" class="form-control" value="Name" required>
+                        <input type="text" name="fullname" class="form-control" value="<?= htmlspecialchars($user['username']) ?>" required>
                     </div>
                     <div class="mb-3">
                         <label class="form-label">Email Address</label>
-                        <input type="email" name="email" id="email" class="form-control" value="name@foodify.com" required>
+                        <input type="email" name="email" class="form-control" value="<?= htmlspecialchars($user['email']) ?>" required>
                     </div>
                     <div class="mb-3">
-                        <label class="form-label">Phone Number</label>
-                        <input type="tel" name="phone" id="phone" class="form-control" value="012-3456789" placeholder="e.g., 012-3456789">
+                        <label class="bi bi-phone me-1"></i><label class="form-label">Phone Number</label>
+                        <input type="text" name="phone" class="form-control" value="<?= htmlspecialchars($user['phone'] ?? '') ?>">
                     </div>
                     <div class="mb-4">
-                        <label class="form-label">Delivery Address</label>
-                        <textarea name="address" id="address" class="form-control" rows="3" placeholder="Your full address for delivery">No. 12, Jalan Universiti 1, Taman Universiti, 81310 Johor Bahru, Johor</textarea>
+                        <label class="form-label">Default Delivery Address</label>
+                        <textarea name="address" class="form-control" rows="3"><?= htmlspecialchars($user['address'] ?? '') ?></textarea>
                     </div>
-                    <button type="submit" class="btn-save"><i class="bi bi-check-lg"></i> Save Changes</button>
+                    <!-- Changed to type="button" to trigger SweetAlert -->
+                    <button type="button" onclick="confirmUpdate()" class="btn-primary-foodify w-100">Update Profile</button>
+                    <!-- Hidden submit button to be triggered by JS -->
+                    <input type="hidden" name="update_profile" value="1">
                 </form>
             </div>
         </div>
 
-        <!-- Change Password Section -->
         <div class="col-lg-5">
             <div class="profile-card">
-                <h3><i class="bi bi-shield-lock" style="color: var(--orange);"></i> Change Password</h3>
-                <form id="passwordForm">
+                <h5 class="fw-bold mb-4"><i class="bi bi-shield-lock me-2 text-danger"></i>Change Password</h5>
+                <form method="POST">
                     <div class="mb-3">
                         <label class="form-label">Current Password</label>
-                        <input type="password" name="current_password" id="currentPassword" class="form-control" placeholder="Enter current password">
+                        <input type="password" name="current_password" class="form-control" required>
                     </div>
+                    <hr>
                     <div class="mb-3">
                         <label class="form-label">New Password</label>
-                        <input type="password" name="new_password" id="newPassword" class="form-control" placeholder="Minimum 6 characters">
+                        <input type="password" name="new_password" class="form-control" required>
                     </div>
                     <div class="mb-4">
                         <label class="form-label">Confirm New Password</label>
-                        <input type="password" name="confirm_password" id="confirmPassword" class="form-control" placeholder="Re-enter new password">
+                        <input type="password" name="confirm_password" class="form-control" required>
                     </div>
-                    <button type="submit" class="btn-save"><i class="bi bi-key"></i> Update Password</button>
+                    <button type="submit" name="update_password" class="btn-primary-foodify w-100" style="background: var(--dark);">Change Password</button>
                 </form>
-            </div>
-
-            <!-- Account Stats -->
-            <div class="profile-card">
-                <h3><i class="bi bi-graph-up" style="color: var(--orange);"></i> Account Stats</h3>
-                <div class="d-flex justify-content-between align-items-center mb-3">
-                    <span class="text-muted">Account Status</span>
-                    <span class="badge" style="background: var(--green-light); color: var(--green);">Active</span>
-                </div>
-                <div class="d-flex justify-content-between align-items-center">
-                    <span class="text-muted">Role</span>
-                    <span class="fw-bold">Customer</span>
-                </div>
-                <hr class="my-3">
-                <div class="d-flex justify-content-between align-items-center">
-                    <span class="text-muted">Total Orders</span>
-                    <span class="fw-bold">8</span>
-                </div>
             </div>
         </div>
     </div>
 </div>
+
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 <script>
-    // Alert function for demo - teammates can replace with actual AJAX calls
-    function showAlert(message, type) {
-        const alertBox = document.getElementById('alertMessage');
-        const alertText = document.getElementById('alertText');
-        alertText.innerHTML = message;
-        alertBox.className = `alert alert-${type} alert-custom show`;
-        
-        // Auto hide after 4 seconds
-        setTimeout(() => {
-            alertBox.classList.remove('show');
-        }, 4000);
-        
-        // Scroll to top to show alert
-        window.scrollTo({ top: 0, behavior: 'smooth' });
+    // Confirmation before updating profile
+    function confirmUpdate() {
+        Swal.fire({
+            title: 'Are you sure?',
+            text: "Do you want to save these changes to your profile?",
+            icon: 'question',
+            showCancelButton: true,
+            confirmButtonColor: '#FF8F00',
+            cancelButtonColor: '#777',
+            confirmButtonText: 'Yes, update it!'
+        }).then((result) => {
+            if (result.isConfirmed) {
+                document.getElementById('profileForm').submit();
+            }
+        });
     }
-    
-    // Profile Form Submit (Demo)
-    document.getElementById('profileForm').addEventListener('submit', function(e) {
-        e.preventDefault();
-        
-        const fullname = document.getElementById('fullname').value;
-        const email = document.getElementById('email').value;
-        
-        if (!fullname || !email) {
-            showAlert('Please fill in all required fields.', 'danger');
-            return;
-        }
-        
-        // Demo success message - teammates will replace with actual API call
-        showAlert('Profile updated successfully!', 'success');
-        
-        // Update sidebar name (demo)
-        document.querySelector('.user-name').innerHTML = fullname;
-        document.querySelector('.profile-title h1').innerHTML = fullname;
-    });
-    
-    // Password Form Submit (Demo)
-    document.getElementById('passwordForm').addEventListener('submit', function(e) {
-        e.preventDefault();
-        
-        const currentPwd = document.getElementById('currentPassword').value;
-        const newPwd = document.getElementById('newPassword').value;
-        const confirmPwd = document.getElementById('confirmPassword').value;
-        
-        if (!currentPwd) {
-            showAlert('Please enter your current password.', 'danger');
-            return;
-        }
-        
-        if (!newPwd) {
-            showAlert('Please enter a new password.', 'danger');
-            return;
-        }
-        
-        if (newPwd.length < 6) {
-            showAlert('New password must be at least 6 characters.', 'danger');
-            return;
-        }
-        
-        if (newPwd !== confirmPwd) {
-            showAlert('New passwords do not match.', 'danger');
-            return;
-        }
-        
-        // Demo validation for current password
-        if (currentPwd !== '123456') {
-            showAlert('Current password is incorrect.', 'danger');
-            return;
-        }
-        
-        // Demo success message - teammates will replace with actual API call
-        showAlert('Password updated successfully!', 'success');
-        
-        // Clear password fields
-        document.getElementById('currentPassword').value = '';
-        document.getElementById('newPassword').value = '';
-        document.getElementById('confirmPassword').value = '';
-    });
-    
-    // Mobile menu toggle (simple)
-    const sidebar = document.getElementById('sidebar');
+
+    // Logic for Status Alerts
+    <?php if($status == "profile_success"): ?>
+        Swal.fire({ icon: 'success', title: 'Success!', text: 'Your profile has been updated.', confirmButtonColor: '#FF8F00' });
+    <?php elseif($status == "password_success"): ?>
+        Swal.fire({ icon: 'success', title: 'Success!', text: 'Password has been changed.', confirmButtonColor: '#FF8F00' });
+    <?php elseif($status == "current_pwd_wrong"): ?>
+        Swal.fire({ icon: 'error', title: 'Oops!', text: 'Incorrect current password.', confirmButtonColor: '#1A1A1A' });
+    <?php elseif($status == "password_mismatch"): ?>
+        Swal.fire({ icon: 'warning', title: 'Mismatch!', text: 'New passwords do not match.', confirmButtonColor: '#FF8F00' });
+    <?php elseif($status == "password_short"): ?>
+        Swal.fire({ icon: 'warning', title: 'Too Short!', text: 'Password must be at least 6 characters.', confirmButtonColor: '#FF8F00' });
+    <?php endif; ?>
 </script>
+
 </body>
 </html>
