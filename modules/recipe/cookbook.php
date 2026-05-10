@@ -300,6 +300,8 @@
                 box-shadow: 0 12px 24px rgba(0,0,0,0.08);
             }
             .add-recipe-card i { font-size: 2.5rem; }
+
+            /* ── Category grid ── */
             .cat-grid {
                 display: grid;
                 grid-template-columns: 1fr 1fr;
@@ -329,8 +331,145 @@
                 font-weight: 700;
             }
             .cat-item i { font-size: 1.2rem; }
+
+            /* ── Step visibility ── */
             .step { display: none; }
             .step.active { display: block; }
+
+            /* ── Step progress indicator ── */
+            .step-indicator {
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                gap: 0;
+                margin-bottom: 1.25rem;
+            }
+            .step-dot {
+                width: 28px;
+                height: 28px;
+                border-radius: 50%;
+                background: #e0e0e0;
+                color: #999;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                font-size: 12px;
+                font-weight: 700;
+                transition: all 0.2s;
+                flex-shrink: 0;
+            }
+            .step-dot.active {
+                background: var(--primary-green);
+                color: white;
+            }
+            .step-dot.done {
+                background: var(--primary-lime);
+                color: white;
+            }
+            .step-line {
+                flex: 1;
+                height: 2px;
+                background: #e0e0e0;
+                max-width: 40px;
+            }
+            .step-line.done { background: var(--primary-lime); }
+
+            /* ── Ingredient / Step rows ── */
+            .ingredient-row, .step-row {
+                display: flex;
+                gap: 8px;
+                margin-bottom: 8px;
+                align-items: center;
+            }
+            .ingredient-row input, .step-row textarea {
+                flex: 1;
+                border: 1.5px solid #e0e0e0;
+                border-radius: 10px;
+                padding: 8px 12px;
+                font-size: 14px;
+                font-family: inherit;
+                outline: none;
+                transition: border 0.15s;
+                resize: none;
+            }
+            .ingredient-row input:focus, .step-row textarea:focus {
+                border-color: var(--primary-green);
+            }
+            .remove-btn {
+                background: none;
+                border: none;
+                color: #dc3545;
+                font-size: 1.1rem;
+                cursor: pointer;
+                padding: 4px;
+                line-height: 1;
+                flex-shrink: 0;
+            }
+            .add-row-btn {
+                background: none;
+                border: 1.5px dashed #ccc;
+                border-radius: 10px;
+                padding: 7px 14px;
+                font-size: 13px;
+                font-family: inherit;
+                color: #888;
+                cursor: pointer;
+                width: 100%;
+                transition: all 0.15s;
+                margin-bottom: 1rem;
+            }
+            .add-row-btn:hover {
+                border-color: var(--primary-green);
+                color: var(--primary-green);
+            }
+
+            /* ── Cook time pills ── */
+            .time-pills {
+                display: flex;
+                flex-wrap: wrap;
+                gap: 8px;
+                margin-bottom: 1rem;
+            }
+            .time-pill {
+                padding: 6px 16px;
+                border: 1.5px solid #e0e0e0;
+                border-radius: 50px;
+                font-size: 13px;
+                font-family: inherit;
+                font-weight: 500;
+                cursor: pointer;
+                transition: all 0.15s;
+                background: white;
+                color: #555;
+            }
+            .time-pill:hover { border-color: var(--primary-orange); color: var(--primary-orange); }
+            .time-pill.selected {
+                background: var(--primary-orange);
+                border-color: var(--primary-orange);
+                color: white;
+                font-weight: 700;
+            }
+
+            .form-label-sm {
+                font-size: 13px;
+                color: #888;
+                font-weight: 500;
+                margin-bottom: 6px;
+                display: block;
+            }
+            .modal-body { max-height: 70vh; overflow-y: auto; }
+
+            /* recipe card meta tags */
+            .meta-tag {
+                display: inline-flex;
+                align-items: center;
+                gap: 3px;
+                font-size: 0.7rem;
+                background: #f0f0f0;
+                border-radius: 20px;
+                padding: 2px 8px;
+                color: #666;
+            }
         </style>
     </head>
     <body>
@@ -366,7 +505,6 @@
                 <i class="bi bi-journal-bookmark-fill"></i>
                 <span>My Recipes</span>
             </div>
-            <!-- Grid kosong — JavaScript akan isi -->
             <div class="recipe-grid" id="myRecipesGrid">
                 <div class="add-recipe-card" id="addRecipeBtn" onclick="openAddModal()">
                     <i class="bi bi-plus-circle"></i>
@@ -392,15 +530,28 @@
             <span class="cart-badge" id="cartBadge">0</span>
         </a>
 
-        <!-- Add Recipe Modal -->
+        <!-- ══════════════════════════════════════════════════════════════
+             Add Recipe Modal — 3-step form
+        ═══════════════════════════════════════════════════════════════ -->
         <div class="modal fade" id="addRecipeModal" tabindex="-1" aria-hidden="true">
-            <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-dialog modal-dialog-centered modal-lg">
                 <div class="modal-content" style="border-radius:20px;border:none;">
                     <div class="modal-header border-0 pb-0">
                         <h5 class="modal-title fw-bold">Add New Recipe</h5>
                         <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
                     </div>
                     <div class="modal-body pt-2">
+
+                        <!-- Progress dots -->
+                        <div class="step-indicator">
+                            <div class="step-dot active" id="dot1">1</div>
+                            <div class="step-line" id="line12"></div>
+                            <div class="step-dot" id="dot2">2</div>
+                            <div class="step-line" id="line23"></div>
+                            <div class="step-dot" id="dot3">3</div>
+                        </div>
+
+                        <!-- ── STEP 1: Category ── -->
                         <div class="step active" id="step1">
                             <p class="text-secondary mb-3" style="font-size:14px;">Choose a category for your recipe</p>
                             <div class="cat-grid">
@@ -411,22 +562,51 @@
                                 <button class="cat-item" onclick="selectCat(this,'Soup','bi-droplet-half')"><i class="bi bi-droplet-half"></i> Soup</button>
                                 <button class="cat-item" onclick="selectCat(this,'Other','bi-star')"><i class="bi bi-star"></i> Other</button>
                             </div>
-                            <button class="btn w-100 text-white fw-bold" style="background:var(--primary-green);border-radius:12px;padding:10px;" onclick="goStep2()">Next <i class="bi bi-arrow-right"></i></button>
+                            <button class="btn w-100 text-white fw-bold" style="background:var(--primary-green);border-radius:12px;padding:10px;" onclick="goStep(2)">Next <i class="bi bi-arrow-right"></i></button>
                         </div>
+
+                        <!-- ── STEP 2: Basic Info + Ingredients ── -->
                         <div class="step" id="step2">
                             <div class="mb-3">
-                                <label class="form-label text-secondary" style="font-size:13px;">Recipe Name</label>
+                                <label class="form-label-sm">Recipe Name <span class="text-danger">*</span></label>
                                 <input type="text" id="recipeName" class="form-control" placeholder="e.g. Mee Goreng Mamak" style="border-radius:12px;">
                             </div>
                             <div class="mb-3">
-                                <label class="form-label text-secondary" style="font-size:13px;">Short Description (optional)</label>
-                                <textarea id="recipeDesc" class="form-control" rows="3" placeholder="What makes this recipe special?" style="border-radius:12px;resize:none;"></textarea>
+                                <label class="form-label-sm">About This <span class="text-muted">(optional)</span></label>
+                                <textarea id="recipeDesc" class="form-control" rows="2" placeholder="What makes this recipe special?" style="border-radius:12px;resize:none;"></textarea>
                             </div>
-                            <div class="d-flex gap-2">
-                                <button class="btn btn-outline-secondary fw-semibold flex-fill" style="border-radius:12px;" onclick="goBack()"><i class="bi bi-arrow-left"></i> Back</button>
-                                <button class="btn text-white fw-bold flex-fill" style="background:var(--primary-green);border-radius:12px;" onclick="saveRecipe()">Save Recipe</button>
+
+                            <label class="form-label-sm">Ingredients <span class="text-danger">*</span></label>
+                            <div id="ingredientsList"></div>
+                            <button class="add-row-btn" onclick="addIngredient()"><i class="bi bi-plus"></i> Add Ingredient</button>
+
+                            <label class="form-label-sm mt-2">Cooking Time <span class="text-danger">*</span></label>
+                            <div class="time-pills" id="timePills">
+                                <button class="time-pill" onclick="selectTime(this,'< 15 min')">⚡ &lt;15 min</button>
+                                <button class="time-pill" onclick="selectTime(this,'15–30 min')">🕒 15–30 min</button>
+                                <button class="time-pill" onclick="selectTime(this,'30–60 min')">🍳 30–60 min</button>
+                                <button class="time-pill" onclick="selectTime(this,'1–2 hours')">⏳ 1–2 hours</button>
+                                <button class="time-pill" onclick="selectTime(this,'2+ hours')">🫕 2+ hours</button>
+                            </div>
+
+                            <div class="d-flex gap-2 mt-1">
+                                <button class="btn btn-outline-secondary fw-semibold flex-fill" style="border-radius:12px;" onclick="goStep(1)"><i class="bi bi-arrow-left"></i> Back</button>
+                                <button class="btn text-white fw-bold flex-fill" style="background:var(--primary-green);border-radius:12px;" onclick="goStep(3)">Next <i class="bi bi-arrow-right"></i></button>
                             </div>
                         </div>
+
+                        <!-- ── STEP 3: Cooking Steps ── -->
+                        <div class="step" id="step3">
+                            <label class="form-label-sm mb-2">Preparation <span class="text-danger">*</span></label>
+                            <div id="stepsList"></div>
+                            <button class="add-row-btn" onclick="addCookingStep()"><i class="bi bi-plus"></i> Add Step</button>
+
+                            <div class="d-flex gap-2 mt-2">
+                                <button class="btn btn-outline-secondary fw-semibold flex-fill" style="border-radius:12px;" onclick="goStep(2)"><i class="bi bi-arrow-left"></i> Back</button>
+                                <button class="btn text-white fw-bold flex-fill" style="background:var(--primary-orange);border-radius:12px;" onclick="saveRecipe()"><i class="bi bi-check-lg"></i> Save Recipe</button>
+                            </div>
+                        </div>
+
                     </div>
                 </div>
             </div>
@@ -446,16 +626,15 @@
                 return d.innerHTML;
             }
 
-            // ── MY RECIPES — disimpan dalam localStorage ──────────────
+            // ── MY RECIPES ────────────────────────────────────────────
             const DEFAULT_MY_RECIPES = [
-                { name: 'My Special Fried Rice', icon: 'bi-egg-fried',  date: 'Jan 15, 2025' },
-                { name: 'Family Secret Rendang', icon: 'bi-cup-straw',  date: 'Feb 3, 2025'  }
+                { name: 'My Special Fried Rice', icon: 'bi-egg-fried', date: 'Jan 15, 2025', cookTime: '15–30 min', ingredients: ['Rice','Egg','Soy sauce'], steps: ['Cook rice.','Fry egg.','Mix together.'] },
+                { name: 'Family Secret Rendang',  icon: 'bi-cup-straw', date: 'Feb 3, 2025',  cookTime: '2+ hours',   ingredients: ['Beef','Coconut milk','Rendang paste'], steps: ['Marinate beef.','Slow cook with paste and coconut milk until dry.'] }
             ];
 
             function getMyRecipes() {
                 const stored = localStorage.getItem('myRecipes');
                 if (!stored) {
-                    // Kali pertama — isi dengan data default
                     localStorage.setItem('myRecipes', JSON.stringify(DEFAULT_MY_RECIPES));
                     return DEFAULT_MY_RECIPES;
                 }
@@ -467,11 +646,9 @@
             }
 
             function renderMyRecipes() {
-                const recipes   = getMyRecipes();
-                const grid      = document.getElementById('myRecipesGrid');
-                const addBtn    = document.getElementById('addRecipeBtn');
-
-                // Kosongkan grid tapi simpan butang Add
+                const recipes = getMyRecipes();
+                const grid    = document.getElementById('myRecipesGrid');
+                const addBtn  = document.getElementById('addRecipeBtn');
                 grid.innerHTML = '';
 
                 recipes.forEach((recipe, index) => {
@@ -480,6 +657,8 @@
                     card.setAttribute('onclick',
                         `window.location.href='recipeDetails.html?name=${encodeURIComponent(recipe.name)}&icon=${encodeURIComponent(recipe.icon)}'`
                     );
+                    const timeTag  = recipe.cookTime  ? `<span class="meta-tag"><i class="bi bi-clock"></i> ${escapeHtml(recipe.cookTime)}</span>` : '';
+                    const ingCount = recipe.ingredients ? `<span class="meta-tag"><i class="bi bi-list-ul"></i> ${recipe.ingredients.length} ingredients</span>` : '';
                     card.innerHTML = `
                         <div class="delete-icon" onclick="event.stopPropagation(); deleteMyRecipe(${index})">
                             <i class="bi bi-trash3"></i>
@@ -487,12 +666,14 @@
                         <div class="recipe-img"><i class="bi ${escapeHtml(recipe.icon)}"></i></div>
                         <div class="recipe-info">
                             <div class="recipe-title">${escapeHtml(recipe.name)}</div>
-                            <div class="recipe-meta"><span>Created: ${escapeHtml(recipe.date)}</span></div>
+                            <div class="recipe-meta" style="gap:4px;flex-wrap:wrap;margin-top:6px;">
+                                ${timeTag}${ingCount}
+                            </div>
+                            <div class="recipe-meta mt-1"><span>Created: ${escapeHtml(recipe.date)}</span></div>
                         </div>`;
                     grid.appendChild(card);
                 });
 
-                // Letak balik butang Add di hujung
                 grid.appendChild(addBtn);
             }
 
@@ -541,28 +722,79 @@
                 const cart  = JSON.parse(localStorage.getItem('cart') || '[]');
                 const badge = document.getElementById('cartBadge');
                 if (badge) {
-                    badge.textContent    = cart.length;
-                    badge.style.display  = cart.length > 0 ? 'flex' : 'none';
+                    badge.textContent   = cart.length;
+                    badge.style.display = cart.length > 0 ? 'flex' : 'none';
                 }
             }
 
-            // ── MODAL: Add Recipe ──────────────────────────────────────
+            // ══════════════════════════════════════════════════════════
+            //   MODAL STATE
+            // ══════════════════════════════════════════════════════════
             let selectedCat  = '';
             let selectedIcon = 'bi-journal-bookmark-fill';
+            let selectedTime = '';
             let addModal;
+            let currentStep  = 1;
 
             function openAddModal() {
+                // Reset state
                 selectedCat  = '';
                 selectedIcon = 'bi-journal-bookmark-fill';
+                selectedTime = '';
+                currentStep  = 1;
+
                 document.querySelectorAll('.cat-item').forEach(e => e.classList.remove('selected'));
+                document.querySelectorAll('.time-pill').forEach(e => e.classList.remove('selected'));
                 document.getElementById('recipeName').value = '';
                 document.getElementById('recipeDesc').value = '';
-                document.getElementById('step1').classList.add('active');
-                document.getElementById('step2').classList.remove('active');
+
+                // Reset ingredient rows
+                const ingList = document.getElementById('ingredientsList');
+                ingList.innerHTML = '';
+                addIngredient(); // start with one row
+
+                // Reset step rows
+                const stpList = document.getElementById('stepsList');
+                stpList.innerHTML = '';
+                addCookingStep(); // start with one row
+
+                showStep(1);
                 addModal = new bootstrap.Modal(document.getElementById('addRecipeModal'));
                 addModal.show();
             }
 
+            // ── Navigate between steps ────────────────────────────────
+            function goStep(n) {
+                if (n > currentStep) {
+                    // Validate before advancing
+                    if (currentStep === 1) {
+                        if (!selectedCat) { alert('Please choose a category first.'); return; }
+                    }
+                    if (currentStep === 2) {
+                        const name = document.getElementById('recipeName').value.trim();
+                        if (!name) { alert('Please enter a recipe name.'); return; }
+                        const ings = getIngredients();
+                        if (ings.length === 0 || ings.every(i => !i.trim())) { alert('Please add at least one ingredient.'); return; }
+                        if (!selectedTime) { alert('Please select a cooking time.'); return; }
+                    }
+                }
+                currentStep = n;
+                showStep(n);
+            }
+
+            function showStep(n) {
+                [1,2,3].forEach(i => {
+                    document.getElementById(`step${i}`).classList.toggle('active', i === n);
+                    const dot = document.getElementById(`dot${i}`);
+                    dot.classList.remove('active','done');
+                    if (i === n)      dot.classList.add('active');
+                    if (i < n)        dot.classList.add('done');
+                });
+                if (document.getElementById('line12')) document.getElementById('line12').classList.toggle('done', n > 1);
+                if (document.getElementById('line23')) document.getElementById('line23').classList.toggle('done', n > 2);
+            }
+
+            // ── Category ──────────────────────────────────────────────
             function selectCat(el, cat, icon) {
                 document.querySelectorAll('.cat-item').forEach(e => e.classList.remove('selected'));
                 el.classList.add('selected');
@@ -570,30 +802,81 @@
                 selectedIcon = icon;
             }
 
-            function goStep2() {
-                if (!selectedCat) { alert('Please choose a category first.'); return; }
-                document.getElementById('step1').classList.remove('active');
-                document.getElementById('step2').classList.add('active');
+            // ── Cooking time ──────────────────────────────────────────
+            function selectTime(el, time) {
+                document.querySelectorAll('.time-pill').forEach(e => e.classList.remove('selected'));
+                el.classList.add('selected');
+                selectedTime = time;
             }
 
-            function goBack() {
-                document.getElementById('step2').classList.remove('active');
-                document.getElementById('step1').classList.add('active');
+            // ── Ingredient rows ───────────────────────────────────────
+            function addIngredient(value = '') {
+                const list = document.getElementById('ingredientsList');
+                const row  = document.createElement('div');
+                row.className = 'ingredient-row';
+                row.innerHTML = `
+                    <input type="text" placeholder="e.g. 2 cups rice" value="${escapeHtml(value)}">
+                    <button class="remove-btn" onclick="removeRow(this)" title="Remove"><i class="bi bi-x-circle"></i></button>`;
+                list.appendChild(row);
             }
 
+            function getIngredients() {
+                return [...document.querySelectorAll('#ingredientsList input')].map(i => i.value.trim()).filter(Boolean);
+            }
+
+            // ── Cooking step rows ─────────────────────────────────────
+            let stepCounter = 0;
+            function addCookingStep(value = '') {
+                stepCounter++;
+                const list = document.getElementById('stepsList');
+                const row  = document.createElement('div');
+                row.className = 'step-row';
+                row.innerHTML = `
+                    <span style="font-size:13px;font-weight:700;color:var(--primary-green);min-width:22px;">${stepCounter}.</span>
+                    <textarea rows="2" placeholder="Describe this step...">${escapeHtml(value)}</textarea>
+                    <button class="remove-btn" onclick="removeRow(this); renumberSteps();" title="Remove"><i class="bi bi-x-circle"></i></button>`;
+                list.appendChild(row);
+            }
+
+            function renumberSteps() {
+                document.querySelectorAll('#stepsList .step-row span').forEach((span, i) => {
+                    span.textContent = `${i + 1}.`;
+                });
+                stepCounter = document.querySelectorAll('#stepsList .step-row').length;
+            }
+
+            function getCookingSteps() {
+                return [...document.querySelectorAll('#stepsList textarea')].map(t => t.value.trim()).filter(Boolean);
+            }
+
+            function removeRow(btn) {
+                btn.closest('.ingredient-row, .step-row').remove();
+            }
+
+            // ── Save ──────────────────────────────────────────────────
             function saveRecipe() {
-                const name = document.getElementById('recipeName').value.trim();
-                if (!name) { alert('Please enter a recipe name.'); return; }
+                const steps = getCookingSteps();
+                if (steps.length === 0) { alert('Please add at least one cooking step.'); return; }
 
                 const today  = new Date();
                 const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
                 const dateStr = `${months[today.getMonth()]} ${today.getDate()}, ${today.getFullYear()}`;
 
-                // Simpan dalam localStorage — kekal walaupun refresh
-                const recipes = getMyRecipes();
-                recipes.push({ name, icon: selectedIcon, date: dateStr });
-                saveMyRecipes(recipes);
+                const name = document.getElementById('recipeName').value.trim();
+                const desc = document.getElementById('recipeDesc').value.trim();
 
+                const recipes = getMyRecipes();
+                recipes.push({
+                    name,
+                    description: desc,
+                    icon: selectedIcon,
+                    category: selectedCat,
+                    cookTime: selectedTime,
+                    ingredients: getIngredients(),
+                    steps,
+                    date: dateStr
+                });
+                saveMyRecipes(recipes);
                 renderMyRecipes();
                 addModal.hide();
             }
