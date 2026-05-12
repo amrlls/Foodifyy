@@ -22,19 +22,16 @@ if ($isLoggedIn) {
     }
 }
 
-// Ambil ID resipi dari URL
 $recipe_id = isset($_GET['id']) ? (int)$_GET['id'] : 0;
 $type = $_GET['type'] ?? '';
 
 if ($type === 'user') {
-    // Query dari created_recipes
     $sql = "SELECT *, 0 as is_saved FROM created_recipes WHERE cr_id = ? AND user_id = ?";
     $stmt = $conn->prepare($sql);
     $stmt->bind_param("ii", $recipe_id, $userId);
     $stmt->execute();
     $recipe = $stmt->get_result()->fetch_assoc();
 } else {
-    // Query dari recipes (asal)
     $sql = "SELECT r.*, 
             (SELECT COUNT(*) FROM saved_recipes s WHERE s.recipe_id = r.recipe_id AND s.user_id = ?) as is_saved 
             FROM recipes r WHERE r.recipe_id = ?";
@@ -57,6 +54,10 @@ $gradients = [
     'Asian'   => 'linear-gradient(135deg, #e67e22, #f39c12)',
 ];
 $grad = $gradients[$recipe['cuisine']] ?? 'linear-gradient(135deg, #2E7D32, #9FA825)';
+
+// Cloudinary video only
+$videoUrl = $recipe['video_url'] ?? '';
+$embedUrl = (!empty($videoUrl) && str_contains($videoUrl, 'cloudinary.com')) ? $videoUrl : '';
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -77,7 +78,7 @@ $grad = $gradients[$recipe['cuisine']] ?? 'linear-gradient(135deg, #2E7D32, #9FA
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body { font-family: 'Nunito', sans-serif; background: #F7F9F7; color: var(--dark); }
 
-        /* ── SIDEBAR (KEKAL ASAL) ── */
+        /* ── SIDEBAR ── */
         .sidebar {
             position: fixed; left: 0; top: 0; width: var(--sidebar-w); height: 100vh;
             background: white; box-shadow: 2px 0 16px rgba(0,0,0,0.06);
@@ -110,13 +111,7 @@ $grad = $gradients[$recipe['cuisine']] ?? 'linear-gradient(135deg, #2E7D32, #9FA
         }
         .user-row:hover { background-color: #DDEEE6 !important; transform: translateY(-3px); box-shadow: 0 4px 10px rgba(0,0,0,0.05); }
         .user-row i { font-size: 1.6rem; color: var(--green); }
-        .user-avatar-img { 
-            width: 35px; 
-            height: 35px; 
-            border-radius: 50%; 
-            object-fit: cover; 
-        }
-        
+        .user-avatar-img { width: 35px; height: 35px; border-radius: 50%; object-fit: cover; }
         .user-name { font-weight: 700; font-size: 0.88rem; }
         .user-role { font-size: 0.7rem; color: var(--muted); }
 
@@ -127,8 +122,7 @@ $grad = $gradients[$recipe['cuisine']] ?? 'linear-gradient(135deg, #2E7D32, #9FA
 
         /* ── MAIN CONTENT ── */
         .main-content { margin-left: var(--sidebar-w); padding: 2rem; min-height: 100vh; }
-        
-        /* Back Button Style */
+
         .btn-back {
             display: inline-flex; align-items: center; gap: 8px; color: var(--dark);
             text-decoration: none; font-weight: 700; margin-bottom: 1.5rem;
@@ -138,10 +132,9 @@ $grad = $gradients[$recipe['cuisine']] ?? 'linear-gradient(135deg, #2E7D32, #9FA
         .btn-back:hover { color: var(--orange); transform: translateX(-5px); }
 
         .recipe-layout { display: grid; grid-template-columns: 1fr 1fr; gap: 2rem; margin-bottom: 2rem; }
-        
+
         .recipe-card-main { background: white; border-radius: 24px; overflow: hidden; box-shadow: 0 4px 12px rgba(0,0,0,0.08); position: relative; }
-        
-        /* Save Button */
+
         .btn-save-recipe {
             position: absolute; top: 15px; right: 15px; z-index: 10;
             background: white; border: none; width: 45px; height: 45px; border-radius: 50%;
@@ -153,14 +146,18 @@ $grad = $gradients[$recipe['cuisine']] ?? 'linear-gradient(135deg, #2E7D32, #9FA
 
         .recipe-img-box { height: 280px; display: flex; align-items: center; justify-content: center; }
         .recipe-img-box img { width: 100%; height: 100%; object-fit: cover; }
-        
+
         .video-container { background: white; border-radius: 24px; overflow: hidden; box-shadow: 0 4px 12px rgba(0,0,0,0.08); }
-        .video-player { background: #1a1a1a; aspect-ratio: 16 / 9; display: flex; align-items: center; justify-content: center; cursor: pointer; }
+        .video-player { background: #1a1a1a; aspect-ratio: 16/9; display: flex; align-items: center; justify-content: center; }
         .video-player i { font-size: 4rem; color: white; opacity: 0.8; }
+        .video-no-content {
+            background: linear-gradient(135deg, #f0f0f0, #e0e0e0);
+            aspect-ratio: 16/9; display: flex; flex-direction: column;
+            align-items: center; justify-content: center; color: #aaa;
+        }
 
         .info-card { background: white; border-radius: 20px; padding: 1.5rem; margin-bottom: 2rem; box-shadow: 0 4px 12px rgba(0,0,0,0.03); }
         .section-title { font-weight: 800; border-bottom: 3px solid var(--orange); display: inline-block; margin-bottom: 1.2rem; padding-bottom: 4px; }
-        
         .step-num { width: 28px; height: 28px; background: var(--orange); color: white; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; font-size: 0.8rem; font-weight: bold; margin-right: 10px; flex-shrink: 0; }
     </style>
 </head>
@@ -186,17 +183,13 @@ $grad = $gradients[$recipe['cuisine']] ?? 'linear-gradient(135deg, #2E7D32, #9FA
     <div class="sidebar-bottom">
         <?php if ($isLoggedIn): ?>
             <a href="../profile/profile.php" class="text-decoration-none" style="color: inherit;">
-               <div class="user-row">
-                    <?php 
-                    // Kita kena undur 2 folder ke belakang untuk jumpa folder assets
-                    $imgPath = "../../assets/images/profiles/" . $nav_profile_img;
-                    
-                    if (!empty($nav_profile_img) && file_exists($imgPath)): ?>
-                        <img src="<?= $imgPath ?>" class="user-avatar-img">
+                <div class="user-row">
+                    <?php $navProfileSrc = getImageSrc($nav_profile_img, '../../assets/images/profiles/'); ?>
+                    <?php if ($navProfileSrc): ?>
+                        <img src="<?= htmlspecialchars($navProfileSrc) ?>" class="user-avatar-img">
                     <?php else: ?>
                         <i class="bi bi-person-circle"></i>
                     <?php endif; ?>
-                    
                     <div>
                         <div class="user-name"><?= htmlspecialchars($username) ?></div>
                         <div class="user-role"><?= htmlspecialchars($nav_role) ?></div>
@@ -211,7 +204,6 @@ $grad = $gradients[$recipe['cuisine']] ?? 'linear-gradient(135deg, #2E7D32, #9FA
 </div>
 
 <div class="main-content">
-    <!-- BACK BUTTON TU KAT SINI -->
     <a href="javascript:history.back()" class="btn-back">
         <i class="bi bi-arrow-left"></i> Go Back
     </a>
@@ -219,21 +211,18 @@ $grad = $gradients[$recipe['cuisine']] ?? 'linear-gradient(135deg, #2E7D32, #9FA
     <div class="recipe-layout">
         <div class="recipe-card-main">
             <?php if ($type !== 'user'): ?>
-        <button class="btn-save-recipe <?= ($recipe['is_saved'] > 0) ? 'active' : '' ?>" 
-                onclick="toggleSave(event, <?= $recipe['recipe_id'] ?>)">
-            <i class="bi bi-heart"></i>
-        </button>
-<?php endif; ?>
-            <div class="recipe-img-box" style="background: <?= $grad ?>;">
-                <?php 
-            $basePath = ($type === 'user') ? '../../assets/images/recipes/' : '../../assets/images/recipes/';
-            $imgSrc = getImageSrc($recipe['image'], $basePath); 
-            ?>
-            <?php if ($imgSrc): ?>
-                <img src="<?= htmlspecialchars($imgSrc) ?>">
-            <?php else: ?>
-                <i class="bi bi-egg-fried" style="font-size: 5rem; color: white;"></i>
+                <button class="btn-save-recipe <?= ($recipe['is_saved'] > 0) ? 'active' : '' ?>"
+                        onclick="toggleSave(event, <?= $recipe['recipe_id'] ?>)">
+                    <i class="bi bi-heart"></i>
+                </button>
             <?php endif; ?>
+            <div class="recipe-img-box" style="background: <?= $grad ?>;">
+                <?php $imgSrc = getImageSrc($recipe['image'], '../../assets/images/recipes/'); ?>
+                <?php if ($imgSrc): ?>
+                    <img src="<?= htmlspecialchars($imgSrc) ?>">
+                <?php else: ?>
+                    <i class="bi bi-egg-fried" style="font-size: 5rem; color: white;"></i>
+                <?php endif; ?>
             </div>
             <div class="p-4">
                 <h1 class="fw-bold"><?= htmlspecialchars($recipe['title']) ?></h1>
@@ -246,6 +235,7 @@ $grad = $gradients[$recipe['cuisine']] ?? 'linear-gradient(135deg, #2E7D32, #9FA
         </div>
 
         <?php if ($type === 'user'): ?>
+        <!-- User recipe -->
         <div class="video-container">
             <div class="video-player" style="background: linear-gradient(135deg, #2E7D32, #9FA825);">
                 <div class="text-center text-white p-4">
@@ -259,11 +249,22 @@ $grad = $gradients[$recipe['cuisine']] ?? 'linear-gradient(135deg, #2E7D32, #9FA
                 <p class="text-muted small mb-0">Created by you on <?= date('d M Y', strtotime($recipe['created_at'])) ?></p>
             </div>
         </div>
+
         <?php else: ?>
+        <!-- Admin recipe — Cloudinary video -->
         <div class="video-container">
-            <div class="video-player" onclick="alert('Video coming soon!')">
-                <i class="bi bi-play-circle-fill"></i>
-            </div>
+            <?php if ($embedUrl): ?>
+                <video controls style="width:100%; aspect-ratio:16/9; background:#000; display:block;">
+                    <source src="<?= htmlspecialchars($embedUrl) ?>" type="video/mp4">
+                    Your browser does not support the video tag.
+                </video>
+            <?php else: ?>
+                <div class="video-no-content">
+                    <i class="bi bi-camera-video-off" style="font-size: 3rem; margin-bottom: 1rem;"></i>
+                    <p class="fw-bold mb-0">No video available</p>
+                    <p class="small">Video tutorial coming soon</p>
+                </div>
+            <?php endif; ?>
             <div class="p-3 text-center">
                 <h4 class="fw-bold">Watch Tutorial</h4>
                 <p class="text-muted small mb-0">Follow the step-by-step video guide</p>
@@ -303,7 +304,7 @@ $grad = $gradients[$recipe['cuisine']] ?? 'linear-gradient(135deg, #2E7D32, #9FA
     const isLoggedIn = <?= $isLoggedIn ? 'true' : 'false' ?>;
 
     async function toggleSave(event, recipeId) {
-        event.preventDefault(); 
+        event.preventDefault();
         if (!isLoggedIn) {
             alert("Sila log masuk untuk menyimpan resipi.");
             window.location.href = '../auth/login.php';

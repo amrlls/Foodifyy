@@ -42,7 +42,7 @@ $sql_recipes = "SELECT r.*,
                 (SELECT COUNT(*) FROM saved_recipes s WHERE s.recipe_id = r.recipe_id AND s.user_id = $userId) as is_saved 
                 FROM recipes r 
                 WHERE r.is_public = 1
-                ORDER BY r.created_at DESC LIMIT 4";
+                ORDER BY r.created_at DESC LIMIT 5";
 $res_recipes = $conn->query($sql_recipes);
 $recipes = $res_recipes->fetch_all(MYSQLI_ASSOC);
 
@@ -58,6 +58,7 @@ $items = $res_items->fetch_all(MYSQLI_ASSOC);
     <title>Foodify – Modern Kitchen</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@800&family=Syne:wght@800&family=Fraunces:wght@900&display=swap" rel="stylesheet">
     <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;600;800&family=Playfair+Display:wght@700;900&display=swap" rel="stylesheet">
     <style>
         :root {
@@ -87,7 +88,7 @@ $items = $res_items->fetch_all(MYSQLI_ASSOC);
         .sidebar-logo h2 { 
             font-family: 'Playfair Display', serif; font-weight: 900; 
             letter-spacing: -1px;
-            background: var(--primary-grad); -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+            background: var(--primary-grad); background-clip: text; -webkit-background-clip: text; -webkit-text-fill-color: transparent;
             margin-bottom: 0.5rem; padding-left: 1rem;
         }
 
@@ -150,10 +151,11 @@ $items = $res_items->fetch_all(MYSQLI_ASSOC);
         }
 
         .hero-banner {
+            font-family: 'Fraunces', serif;
             background: linear-gradient(rgba(0,0,0,0.3), rgba(0,0,0,0.5)), url('https://images.unsplash.com/photo-1556910103-1c02745aae4d?auto=format&fit=crop&w=1200&q=80');
             background-size: cover; 
             background-position: center;
-            border-radius: 35px; 
+            border-radius: 20px; 
             padding: 4rem 4rem; /* Dikurangkan sedikit padding dalam banner */
             color: white; 
             margin-bottom: 1.5rem; /* DIKECILKAN: Jarak antara banner dan content di bawahnya */
@@ -213,7 +215,7 @@ $items = $res_items->fetch_all(MYSQLI_ASSOC);
         <li><a href="modules/recipe/recipes.php"><i class="bi bi-book"></i> Recipes</a></li>
         <li><a href="modules/shop/index.php"><i class="bi bi-bag-heart"></i> Market</a></li>
         <?php if ($isLoggedIn): ?>
-            <li><a href="modules/recipe/cookbook.php"><i class="bi bi-journal-text"></i> My Library</a></li>
+            <li><a href="modules/recipe/cookbook.php"><i class="bi bi-journal-text"></i> My Cookbook</a></li>
             <li><a href="modules/order/index.php"><i class="bi bi-receipt"></i> Orders</a></li>
         <?php endif; ?>
     </ul>
@@ -266,7 +268,7 @@ $items = $res_items->fetch_all(MYSQLI_ASSOC);
                 <div class="d-flex justify-content-between align-items-end w-100">
                     <div>
                         <h6 class="text-danger fw-bold text-uppercase small ls-wide" style="font-size: 0.7rem; margin-bottom: 4px;">Handpicked</h6>
-                        <h3 class="fw-bold m-0">Trending Kitchen</h3>
+                        <h3 class="fw-bold m-0">New For You</h3>
                     </div>
                     <a href="modules/recipe/recipes.php" class="text-dark fw-bold text-decoration-none small">Browse All <i class="bi bi-arrow-right ms-1"></i></a>
                 </div>
@@ -297,37 +299,58 @@ $items = $res_items->fetch_all(MYSQLI_ASSOC);
         </div>
 
         <!-- MARKETPLACE -->
-        <div class="col-lg-5">
-            <div class="section-header-box">
-                <h3 class="fw-bold m-0">Pantry Essentials</h3>
-            </div>
-            <div class="row g-3">
-                <?php foreach ($items as $item): ?>
-                <div class="col-sm-6">
-                    <div class="grocery-card shadow-sm">
-                        <div>
-                            <div class="d-flex justify-content-between align-items-start mb-3">
-                                <div class="p-2 rounded-3 bg-light text-danger">
-                                    <?php 
-                                        $icon = "bi-basket";
-                                        if(stripos($item['name'], 'chicken') !== false) $icon = "bi-tencent-qq";
-                                        if(stripos($item['name'], 'egg') !== false) $icon = "bi-egg-fried";
-                                        if(stripos($item['name'], 'veg') !== false) $icon = "bi-leaf";
-                                    ?>
-                                    <i class="bi <?= $icon ?> fs-4"></i>
-                                </div>
-                                <span class="fw-bold text-dark small">RM <?= number_format($item['price'], 2) ?></span>
-                            </div>
-                            <h6 class="fw-bold text-truncate"><?= htmlspecialchars($item['name']) ?></h6>
-                        </div>
-                        <button onclick="requireLogin(event, 'shop')" class="btn-cart-minimal mt-2">
-                            <i class="bi bi-plus-lg me-1"></i> Add
-                        </button>
+       <!-- MARKETPLACE -->
+<div class="col-lg-5">
+    <div class="section-header-box">
+        <h3 class="fw-bold m-0">Looking for Groceries?</h3>
+    </div>
+    <div class="row g-3">
+        <?php foreach ($items as $item): ?>
+        <div class="col-sm-6">
+            <div class="grocery-card shadow-sm">
+                <div>
+                    <!-- Bahagian Imej Produk -->
+                    <div class="product-img-wrapper mb-3" style="height: 120px; overflow: hidden; border-radius: 15px;">
+                        <?php 
+                            // Mengambil path imej dari database
+                            $productImg = getImageSrc($item['image'], 'assets/images/items/'); 
+                        ?>
+                        <img src="<?= $productImg ? htmlspecialchars($productImg) : 'https://placehold.co/400x300?text=No+Image' ?>" 
+                             class="w-100 h-100 object-fit-cover" 
+                             alt="<?= htmlspecialchars($item['name']) ?>">
                     </div>
+
+                    <div class="d-flex justify-content-between align-items-start mb-2">
+                        <!-- Icon kategori berdasarkan nama (Logic asal dikekalkan) -->
+                        <div class="p-2 rounded-3 bg-light text-danger" style="line-height: 1;">
+                            <?php 
+                                $icon = "bi-basket";
+                                if(stripos($item['name'], 'chicken') !== false) $icon = "bi-tencent-qq";
+                                if(stripos($item['name'], 'egg') !== false) $icon = "bi-egg-fried";
+                                if(stripos($item['name'], 'veg') !== false) $icon = "bi-leaf";
+                            ?>
+                            <i class="bi <?= $icon ?> fs-5"></i>
+                        </div>
+                        <span class="fw-bold text-dark small">RM <?= number_format($item['price'], 2) ?></span>
+                    </div>
+                    
+                    <h6 class="fw-bold text-truncate" title="<?= htmlspecialchars($item['name']) ?>">
+                        <?= htmlspecialchars($item['name']) ?>
+                    </h6>
+                    
+                    <?php if(!empty($item['unit'])): ?>
+                        <p class="text-muted small mb-0" style="font-size: 0.7rem;">Per <?= htmlspecialchars($item['unit']) ?></p>
+                    <?php endif; ?>
                 </div>
-                <?php endforeach; ?>
+
+                <button onclick="requireLogin(event, 'shop')" class="btn-cart-minimal mt-2">
+                    <i class="bi bi-plus-lg me-1"></i> Add
+                </button>
             </div>
         </div>
+        <?php endforeach; ?>
+    </div>
+</div>
     </div>
 </div>
 

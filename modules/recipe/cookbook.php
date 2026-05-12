@@ -633,7 +633,7 @@ $icons = [
             const response = await fetch('toggle_save.php', { method: 'POST', body: formData });
             const data = await response.json();
             if (data.status === 'removed') {
-                btn.closest('.recipe-card').parentElement.remove();
+            btn.closest('.recipe-card').remove();
             }
         } catch (error) {
             console.error('Error:', error);
