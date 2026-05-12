@@ -145,13 +145,27 @@ $icons = [
         }
         .sidebar-footer { padding-top: 2rem; border-top: 1px solid rgba(255,255,255,0.1); }
         .user-card {
-            background: rgba(255,255,255,0.03);
-            border: 1px solid rgba(255,255,255,0.08);
-            padding: 15px; border-radius: 20px;
-            transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
-            cursor: pointer; user-select: none;
+        background: rgba(255,255,255,0.03);
+        border: 1px solid rgba(255,255,255,0.08);
+        padding: 15px;
+        border-radius: 20px;
+        transition: all 0.2s ease;
+        cursor: pointer;
         }
-        .user-card:hover { background: rgba(255,255,255,0.07); transform: translateY(-2px); }
+        .user-card:hover {
+            background: rgba(255,255,255,0.07);
+            transform: translateY(-2px);
+        }
+        .user-card:active {
+            transform: scale(0.95);
+            background: rgba(255,255,255,0.1);
+        }
+        .user-card img {
+            transition: transform 0.3s ease;
+        }
+        .user-card:hover img {
+            transform: rotate(5deg);
+        }
 
         /* ── MAIN CONTENT ── */
         .main-content { 
@@ -299,7 +313,7 @@ $icons = [
         .card-text {
             color: #7f8c8d; font-size: 0.9rem; line-height: 1.6;
             margin-bottom: 1.5rem;
-            display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical;
+            display: -webkit-box; -webkit-line-clamp: 2; line-clamp: 2; -webkit-box-orient: vertical;
             overflow: hidden;
         }
         .card-meta {
@@ -340,23 +354,23 @@ $icons = [
         <?php if ($isLoggedIn): ?>
             <a href="../profile/profile.php" class="text-decoration-none d-block">
                 <div class="user-card d-flex align-items-center gap-3 mb-3">
-                    <?php $navProfileSrc = getImageSrc($nav_profile_img, '../../assets/images/profiles/'); ?>
-                    <?php if ($navProfileSrc): ?>
-                        <img src="<?= htmlspecialchars($navProfileSrc) ?>" style="width:42px; height:42px; border-radius:12px; object-fit:cover;">
-                    <?php else: ?>
-                        <div class="text-white rounded-3 p-2 d-flex justify-content-center align-items-center" style="width:42px; height:42px; background: var(--primary-grad);">
-                            <i class="bi bi-person-fill"></i>
-                        </div>
-                    <?php endif; ?>
-                    <div class="overflow-hidden">
-                        <div class="text-white fw-bold small text-truncate" style="max-width: 130px;">
-                            <?= htmlspecialchars($username) ?>
-                        </div>
-                        <div style="font-size: 0.65rem; color: var(--accent); font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px;">
-                            <?= htmlspecialchars($nav_role) ?>
-                        </div>
+                <?php $navProfileSrc = getImageSrc($nav_profile_img, '../../assets/images/profiles/'); ?>
+                <?php if ($navProfileSrc): ?>
+                    <img src="<?= htmlspecialchars($navProfileSrc) ?>" style="width:42px; height:42px; border-radius:12px; object-fit:cover;">
+                <?php else: ?>
+                    <div class="text-white rounded-3 p-2 d-flex justify-content-center align-items-center" style="width:42px; height:42px; background: var(--primary-grad);">
+                        <i class="bi bi-person-fill"></i>
+                    </div>
+                <?php endif; ?>
+                <div class="overflow-hidden">
+                    <div class="text-white fw-bold small text-truncate" style="max-width: 130px;">
+                        <?= htmlspecialchars($username) ?>
+                    </div>
+                    <div style="font-size: 0.65rem; color: var(--accent); font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px;">
+                        <?= htmlspecialchars($nav_role) ?>
                     </div>
                 </div>
+            </div>
             </a>
             <a href="../auth/logout.php" class="btn btn-outline-danger w-100 rounded-3 py-2 border-opacity-25" style="font-size:0.85rem">
                 <i class="bi bi-box-arrow-right me-2"></i> Logout
@@ -464,16 +478,12 @@ $icons = [
                             </div>
 
                             <div class="card-content">
-                                <span class="card-cat"><?= htmlspecialchars($recipe['meal_type']) ?></span>
+                                <div class="d-flex justify-content-between align-items-center mb-2">
+                                    <span class="card-cat" style="margin-bottom:0;"><?= htmlspecialchars($recipe['meal_type']) ?></span>
+                                    <div class="meta-item"><i class="bi bi-stopwatch"></i> <?= htmlspecialchars($recipe['cooking_time'] ?? '20m') ?></div>
+                                </div>
                                 <h3 class="card-title"><?= htmlspecialchars($recipe['title']) ?></h3>
                                 <p class="card-text"><?= htmlspecialchars($recipe['description']) ?></p>
-                                
-                                <div class="card-meta">
-                                    <div class="meta-item">
-                                        <i class="bi bi-stopwatch"></i>
-                                        <span><?= htmlspecialchars($recipe['cooking_time'] ?? '20m') ?></span>
-                                    </div>
-                                </div>
                             </div>
                         </a>
                     </div>
