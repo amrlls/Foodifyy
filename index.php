@@ -1,11 +1,11 @@
 <?php
 session_start();
 require_once __DIR__ . '/config/database.php';
+require_once __DIR__ . '/config/upload_helper.php';
 
 $isLoggedIn = isset($_SESSION['user_id']);
 $userId     = $_SESSION['user_id'] ?? 0;
 
-// --- TAMBAHAN BARU DI SINI ---
 $nav_profile_img = "";
 $nav_role = "Customer";
 $username = 'Guest';
@@ -22,9 +22,22 @@ if ($isLoggedIn) {
         $nav_role = $user_nav['role'];
     }
 }
-// ----------------------------
 
-// 1. Ambil Resipi (Subquery untuk semak status saved)
+// Logik Pesanan Aluan (Greeting Message) berdasarkan Role
+$greeting = "Welcome to Foodify!";
+if($isLoggedIn) {
+    $role_clean = strtolower($nav_role);
+    if($role_clean == 'admin') {
+        $greeting = "System active. Ready to manage, Admin?";
+    } elseif($role_clean == 'seller') {
+        $greeting = "Your shop is open! Check your stock.";
+    } else {
+        $greeting = "Happy cooking, " . htmlspecialchars($username) . "!";
+    }
+} else {
+    $greeting = "Sign in to start your kitchen journey.";
+}
+
 $sql_recipes = "SELECT r.*, 
                 (SELECT COUNT(*) FROM saved_recipes s WHERE s.recipe_id = r.recipe_id AND s.user_id = $userId) as is_saved 
                 FROM recipes r 
@@ -33,147 +46,154 @@ $sql_recipes = "SELECT r.*,
 $res_recipes = $conn->query($sql_recipes);
 $recipes = $res_recipes->fetch_all(MYSQLI_ASSOC);
 
-// 2. Ambil Item Groceries
 $sql_items = "SELECT * FROM items LIMIT 6";
 $res_items = $conn->query($sql_items);
 $items = $res_items->fetch_all(MYSQLI_ASSOC);
-
-$gradients = [
-    'Melayu'  => 'linear-gradient(135deg, #2E7D32, #9FA825)',
-    'Western' => 'linear-gradient(135deg, #c0392b, #e74c3c)',
-    'Asian'   => 'linear-gradient(135deg, #e67e22, #f39c12)',
-];
 ?>
 <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Foodify – Home</title>
+    <title>Foodify – Modern Kitchen</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
-    <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800;900&family=Playfair+Display:ital,wght@0,700;0,800;1,700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;600;800&family=Playfair+Display:wght@700;900&display=swap" rel="stylesheet">
     <style>
         :root {
-            --green: #2E7D32; --green-light: #E8F5E9;
-            --orange: #FF8F00; --dark: #1A1A1A;
-            --muted: #777; --border: #EEEEEE;
-            --sidebar-w: 270px;
+            --primary-grad: linear-gradient(135deg, #FF6B6B 0%, #FF8E53 100%);
+            --sidebar-dark: #1A1C1E;
+            --accent: #FF8E53;
+            --soft-bg: #F8F9FA;
+            --sidebar-w: 280px;
         }
 
-        * { margin: 0; padding: 0; box-sizing: border-box; }
-        body { font-family: 'Nunito', sans-serif; background: #F7F9F7; color: var(--dark); }
+        body { 
+            font-family: 'Plus Jakarta Sans', sans-serif; 
+            background-color: var(--soft-bg);
+            color: #2D3436;
+            overflow-x: hidden;
+        }
 
         /* ── SIDEBAR ── */
         .sidebar {
             position: fixed; left: 0; top: 0; width: var(--sidebar-w); height: 100vh;
-            background: white; box-shadow: 2px 0 16px rgba(0,0,0,0.06);
-            padding: 1.8rem 1rem; overflow-y: auto; z-index: 1000;
+            background: var(--sidebar-dark); color: white;
+            padding: 2.5rem 1.5rem; z-index: 1000;
             display: flex; flex-direction: column;
+            border-right: 1px solid rgba(255,255,255,0.05);
         }
-        .sidebar-logo {
-            display: flex; flex-direction: column; align-items: center; text-align: center; gap: 12px;
-            margin-bottom: 2rem; padding: 0 8px;
-        }
-        .sidebar-logo img { width: 75px; height: 75px; object-fit: contain; border-radius: 14px; }
-        .sidebar-logo .logo-text h2 { font-weight: 900; font-size: 1.6rem; color: var(--green); line-height: 1; margin-bottom: 4px; }
-        .sidebar-logo .logo-text span { font-size: 0.7rem; color: var(--muted); font-weight: 600; }
 
-        .sidebar-nav { list-style: none; padding: 0; flex: 1; }
-        .sidebar-nav li { margin-bottom: 4px; }
+        .sidebar-logo h2 { 
+            font-family: 'Playfair Display', serif; font-weight: 900; 
+            letter-spacing: -1px;
+            background: var(--primary-grad); -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+            margin-bottom: 0.5rem; padding-left: 1rem;
+        }
+
+        .sidebar-greet-box {
+            padding-left: 1rem; margin-bottom: 3rem;
+        }
+        .sidebar-greet-box p {
+            color: #949494; font-size: 0.8rem; margin: 0; font-weight: 400;
+        }
+
+        .sidebar-nav { list-style: none; padding: 0; flex-grow: 1; }
+        .sidebar-nav li { margin-bottom: 0.5rem; }
         .sidebar-nav a {
-            display: flex; align-items: center; gap: 12px; padding: 11px 14px;
-            color: var(--dark); text-decoration: none; border-radius: 12px;
-            font-weight: 600; font-size: 0.88rem; transition: all 0.18s;
+            display: flex; align-items: center; gap: 15px; padding: 14px 18px;
+            color: #949494; text-decoration: none; border-radius: 16px;
+            font-weight: 500; transition: all 0.3s ease;
         }
-        .sidebar-nav a i { font-size: 1.15rem; width: 22px; }
-        .sidebar-nav a:hover, .sidebar-nav a.active { background: var(--orange); color: white; }
+        .sidebar-nav a:hover { color: white; background: rgba(255,255,255,0.05); }
+        .sidebar-nav a.active { background: var(--primary-grad); color: white; box-shadow: 0 10px 20px rgba(255,107,107,0.25); }
 
-        .sidebar-bottom { border-top: 1px solid var(--border); padding-top: 1rem; margin-top: 1rem; }
-        .user-row {
-            display: flex; align-items: center; gap: 10px; padding: 10px 14px;
-            background: var(--green-light); border-radius: 12px; margin-bottom: 10px;
-            transition: all 0.2s ease-out; cursor: pointer;
+        .sidebar-footer { padding-top: 2rem; border-top: 1px solid rgba(255,255,255,0.1); }
+        /* -- PROFILE CARD ANIMATION -- */
+        .user-card {
+            background: rgba(255,255,255,0.03); 
+            border: 1px solid rgba(255,255,255,0.08);
+            padding: 15px; 
+            border-radius: 20px; 
+            transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1); /* Animasi smooth */
+            cursor: pointer;
+            user-select: none;
         }
-        .user-row:hover { background-color: #DDEEE6 !important; transform: translateY(-3px); box-shadow: 0 4px 10px rgba(0, 0, 0, 0.05); }
-        .user-row i { font-size: 1.6rem; color: var(--green); }
-        .user-avatar-img { 
-            width: 35px; 
-            height: 35px; 
-            border-radius: 50%; 
-            object-fit: cover; 
-        }
-        .user-row .user-name { font-weight: 700; font-size: 0.88rem; }
-        .user-row .user-role { font-size: 0.7rem; color: var(--muted); }
 
-        .btn-side { display: block; padding: 9px; border-radius: 50px; font-weight: 700; font-size: 0.85rem; text-align: center; text-decoration: none; margin-bottom: 6px; }
-        .btn-side-login { background: var(--orange); color: white; }
-        .btn-side-logout { background: #FEE2E2; color: #DC2626; transition: 0.2s; }
-        .btn-side-logout:hover { background: #DC2626; color: white; }
+        /* Kesan bila mouse lalu (hover) */
+        .user-card:hover {
+            background: rgba(255,255,255,0.07);
+            border-color: rgba(255,255,255,0.15);
+            transform: translateY(-2px);
+        }
+
+        /* Kesan bila diklik (active) */
+        .user-card:active {
+            transform: scale(0.95); /* Mengecil sedikit (push effect) */
+            background: rgba(255,255,255,0.1);
+        }
+
+        /* Tambah sedikit glow pada gambar profil */
+        .user-card img {
+            transition: transform 0.3s ease;
+        }
+
+        .user-card:hover img {
+            transform: rotate(5deg);
+        }
 
         /* ── MAIN CONTENT ── */
-        .main-content { margin-left: var(--sidebar-w); padding: 2.5rem; }
+        /* -- MAIN CONTENT -- */
+        .main-content { 
+            margin-left: var(--sidebar-w); 
+            padding: 2rem 3rem; /* Dikurangkan sedikit padding atas */
+        }
+
         .hero-banner {
-            background: linear-gradient(135deg, var(--green) 0%, #3E9B4E 100%);
-            border-radius: 24px; padding: 3.5rem; color: white; margin-bottom: 3rem;
+            background: linear-gradient(rgba(0,0,0,0.3), rgba(0,0,0,0.5)), url('https://images.unsplash.com/photo-1556910103-1c02745aae4d?auto=format&fit=crop&w=1200&q=80');
+            background-size: cover; 
+            background-position: center;
+            border-radius: 35px; 
+            padding: 4rem 4rem; /* Dikurangkan sedikit padding dalam banner */
+            color: white; 
+            margin-bottom: 1.5rem; /* DIKECILKAN: Jarak antara banner dan content di bawahnya */
         }
 
-        /* ── RECIPE CARD ── */
-        .recipe-card {
-            background: white; border-radius: 16px; overflow: hidden; display: flex;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.04); text-decoration: none; color: var(--dark);
-            transition: 0.3s; margin-bottom: 1rem; height: 140px; position: relative;
+        /* Penyelarasan header supaya tidak terlalu jauh dari banner */
+        .section-header-box {
+            height: 60px; /* Dikurangkan sedikit dari 80px */
+            display: flex;
+            flex-direction: column;
+            justify-content: flex-end;
+            margin-bottom: 1.2rem;
         }
-        .recipe-card:hover { transform: translateY(-3px); box-shadow: 0 6px 20px rgba(0,0,0,0.08); border: 1.2px solid var(--orange); }
-        .recipe-img-box { width: 160px; flex-shrink: 0; overflow: hidden; position: relative; }
-        .recipe-img-box img { width: 100%; height: 100%; object-fit: cover; }
-        .recipe-info { padding: 1rem; flex: 1; display: flex; flex-direction: column; justify-content: center; }
-        
-        .btn-save-recipe {
-            position: absolute; top: 10px; left: 10px; z-index: 10;
-            background: white; border: none; width: 32px; height: 32px;
-            border-radius: 50%; display: flex; align-items: center; justify-content: center;
-            box-shadow: 0 3px 6px rgba(0,0,0,0.15); color: #ccc; transition: 0.2s; cursor: pointer;
+        .recipe-item {
+            background: white; border-radius: 24px; padding: 1.2rem;
+            transition: 0.4s cubic-bezier(0.165, 0.84, 0.44, 1);
+            border: 1px solid rgba(0,0,0,0.05); margin-bottom: 1.5rem;
+            cursor: pointer;
         }
-        .btn-save-recipe:hover { transform: scale(1.1); color: #ff4757; }
-        .btn-save-recipe.active { color: #ff4757; }
-        .btn-save-recipe.active i::before { content: "\f415"; } /* bi-heart-fill */
+        .recipe-item:hover { transform: translateY(-5px); box-shadow: 0 20px 40px rgba(0,0,0,0.05); }
+        .recipe-img-wrapper { width: 140px; height: 140px; border-radius: 20px; overflow: hidden; flex-shrink: 0; }
 
-        /* ── GROCERY ITEM CARD ── */
-        .section-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem; }
-        .section-header h4 { font-weight: 800; font-size: 1.3rem; margin: 0; }
-        .view-all { color: var(--orange); text-decoration: none; font-weight: 700; font-size: 0.85rem; }
+        .grocery-card {
+            background: white; border-radius: 24px; border: none;
+            padding: 1.5rem; transition: 0.3s; height: 100%;
+            display: flex; flex-direction: column; justify-content: space-between;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.02);
+        }
+        .grocery-card:hover { box-shadow: 0 15px 30px rgba(0,0,0,0.08); }
 
-        .grocery-item-card {
-            background: white; border-radius: 20px; padding: 1rem; text-align: center;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.04); display: flex; flex-direction: column;
-            align-items: center; height: 100%; border: 1px solid transparent; transition: 0.2s;
+        .btn-cart-minimal {
+            background: #F8F9FA; color: #2D3436; border: none;
+            padding: 10px; border-radius: 12px; font-weight: 600; width: 100%; transition: 0.3s;
         }
-        .grocery-item-card:hover { border-color: var(--green); }
-        .item-icon-circle {
-            width: 55px; height: 55px; background: #f0f9f1; border-radius: 16px;
-            display: flex; align-items: center; justify-content: center; margin-bottom: 0.8rem;
-        }
-        .item-icon-circle i { font-size: 1.5rem; color: #2E7D32; }
-        .grocery-item-card h6 { font-weight: 800; font-size: 0.9rem; margin-bottom: 5px; color: var(--dark); }
-        .item-price { color: var(--orange); font-weight: 800; font-size: 1rem; margin-bottom: 0.8rem; }
-        .btn-add-cart {
-            background: #2E7D32; color: white; border: none; width: 100%;
-            padding: 8px; border-radius: 12px; font-weight: 700; font-size: 0.75rem;
-            transition: 0.2s; margin-top: auto;
-        }
+        .btn-cart-minimal:hover { background: var(--sidebar-dark); color: white; }
 
-        .cart-float {
-            position: fixed; bottom: 30px; right: 30px;
-            background: var(--orange); width: 65px; height: 65px;
-            border-radius: 50%; display: flex; align-items: center; justify-content: center;
-            box-shadow: 0 4px 20px rgba(255,143,0,0.4); text-decoration: none; z-index: 2000;
-        }
-        .cart-float i { color: white; font-size: 1.8rem; }
-        .cart-count {
-            position: absolute; top: 0; right: 0; background: #1a1a1a;
-            color: white; width: 24px; height: 24px; border-radius: 50%;
-            font-size: 0.75rem; display: flex; align-items: center; justify-content: center; font-weight: 800;
+        .floating-cart {
+            background: var(--sidebar-dark); padding: 1rem 1.8rem;
+            border-radius: 50px; box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+            z-index: 999; bottom: 30px; right: 30px;
         }
     </style>
 </head>
@@ -181,110 +201,128 @@ $gradients = [
 
 <div class="sidebar">
     <div class="sidebar-logo">
-        <img src="assets/images/logo.png" alt="Foodify">
-        <div class="logo-text">
-            <h2>Foodify</h2>
-            <span>Recipes + Groceries</span>
-        </div>
+        <h2>foodify.</h2>
     </div>
+    <!-- Greeting Message DI SINI -->
+    <div class="sidebar-greet-box">
+        <p><?= $greeting ?></p>
+    </div>
+    
     <ul class="sidebar-nav">
-        <li><a href="index.php" class="active"><i class="bi bi-house-fill"></i> Home</a></li>
-        <li><a href="modules/recipe/recipes.php"><i class="bi bi-journal-bookmark-fill"></i> Recipes</a></li>
-        <li><a href="modules/shop/index.php"><i class="bi bi-bag-fill"></i> Shop</a></li>
+        <li><a href="index.php" class="active"><i class="bi bi-house-door-fill"></i> Home</a></li>
+        <li><a href="modules/recipe/recipes.php"><i class="bi bi-book"></i> Recipes</a></li>
+        <li><a href="modules/shop/index.php"><i class="bi bi-bag-heart"></i> Market</a></li>
         <?php if ($isLoggedIn): ?>
-            <li><a href="modules/recipe/cookbook.php"><i class="bi bi-bookmark-heart-fill"></i> My Cookbooks</a></li>
-            <li><a href="modules/order/index.php"><i class="bi bi-truck"></i> My Orders</a></li>
+            <li><a href="modules/recipe/cookbook.php"><i class="bi bi-journal-text"></i> My Library</a></li>
+            <li><a href="modules/order/index.php"><i class="bi bi-receipt"></i> Orders</a></li>
         <?php endif; ?>
     </ul>
-    <div class="sidebar-bottom">
+    
+    <div class="sidebar-footer">
     <?php if ($isLoggedIn): ?>
-        <a href="modules/profile/profile.php" class="text-decoration-none" style="color: inherit;">
-            <div class="user-row">
-                <?php if (!empty($nav_profile_img) && file_exists("assets/images/profiles/" . $nav_profile_img)): ?>
-                    <img src="assets/images/profiles/<?= htmlspecialchars($nav_profile_img) ?>" class="user-avatar-img">
-                <?php else: ?>
-                    <i class="bi bi-person-circle"></i>
-                <?php endif; ?>
+        <!-- Selubungi kad dengan link supaya keseluruhan kad boleh diklik -->
+        <a href="modules/profile/profile.php" class="text-decoration-none d-block">
+            <div class="user-card d-flex align-items-center gap-3 mb-3">
+                <?php $navProfileSrc = getImageSrc($nav_profile_img, 'assets/images/profiles/'); ?>
                 
-                <div>
-                    <div class="user-name"><?= htmlspecialchars($username) ?></div>
-                    <div class="user-role"><?= htmlspecialchars($nav_role) ?></div>
+                <?php if ($navProfileSrc): ?>
+                    <img src="<?= htmlspecialchars($navProfileSrc) ?>" style="width:42px; height:42px; border-radius:12px; object-fit:cover;">
+                <?php else: ?>
+                    <div class="text-white rounded-3 p-2 d-flex justify-content-center align-items-center" style="width:42px; height:42px; background: var(--primary-grad);">
+                        <i class="bi bi-person-fill"></i>
+                    </div>
+                <?php endif; ?>
+
+                <div class="overflow-hidden">
+                    <div class="text-white fw-bold small text-truncate" style="max-width: 130px;">
+                        <?= htmlspecialchars($username) ?>
+                    </div>
+                    <div style="font-size: 0.65rem; color: var(--accent); font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px;">
+                        <?= htmlspecialchars($nav_role) ?>
+                    </div>
                 </div>
             </div>
         </a>
-        <a href="modules/auth/logout.php" class="btn-side btn-side-logout"><i class="bi bi-box-arrow-left"></i> Logout</a>
+        
+        <a href="modules/auth/logout.php" class="btn btn-outline-danger w-100 rounded-3 py-2 border-opacity-25" style="font-size:0.85rem">
+            <i class="bi bi-box-arrow-right me-2"></i> Logout
+        </a>
     <?php else: ?>
-        <a href="modules/auth/login.php" class="btn-side btn-side-login"><i class="bi bi-box-arrow-in-right"></i> Login</a>
+        <a href="modules/auth/login.php" class="btn btn-light w-100 rounded-3 py-3 fw-bold shadow-sm">Login</a>
     <?php endif; ?>
-    </div>
+</div>
 </div>
 
 <div class="main-content">
     <div class="hero-banner">
-        <h1 style="font-family:'Playfair Display', serif; font-weight:800;">Cook Smart,<br>Eat Fresh.</h1>
-        <p>Explore community recipes and get fresh ingredients delivered.</p>
+        <h1 class="mb-2">Cook Smart,<br>Eat Fresh.</h1>
+        <p class="opacity-75 fs-5">Premium ingredients for your modern kitchen.</p>
     </div>
 
-    <div class="row">
+    <div class="row g-5">
+        <!-- RECIPES SECTION -->
         <div class="col-lg-7">
-            <div class="section-header">
-                <h4><i class="bi bi-search me-2"></i>Suggested for You</h4>
-                <a href="modules/recipe/recipes.php" class="view-all">View all →</a>
+            <div class="section-header-box">
+                <div class="d-flex justify-content-between align-items-end w-100">
+                    <div>
+                        <h6 class="text-danger fw-bold text-uppercase small ls-wide" style="font-size: 0.7rem; margin-bottom: 4px;">Handpicked</h6>
+                        <h3 class="fw-bold m-0">Trending Kitchen</h3>
+                    </div>
+                    <a href="modules/recipe/recipes.php" class="text-dark fw-bold text-decoration-none small">Browse All <i class="bi bi-arrow-right ms-1"></i></a>
+                </div>
             </div>
+
             <?php foreach ($recipes as $r): 
-                $grad = $gradients[$r['cuisine']] ?? 'var(--green)';
                 $activeClass = ($r['is_saved'] > 0) ? 'active' : '';
             ?>
-            
-            <div style="position: relative;">
-                <button class="btn-save-recipe <?= $activeClass ?>" onclick="toggleSave(event, <?= $r['recipe_id'] ?>)">
-                    <i class="bi bi-heart"></i>
-                </button>
-
-                <!-- LINK DIUBAH KE recipedetail.php DENGAN PARAMETER ?id= -->
-                <a href="modules/recipe/recipedetail.php?id=<?= $r['recipe_id'] ?>" class="recipe-card">
-                    <div class="recipe-img-box" style="background: <?= $grad ?>;">
-                        <?php if($r['image']): ?>
-                            <img src="assets/images/recipes/<?= $r['image'] ?>" alt="">
-                        <?php else: ?>
-                            <div class="h-100 d-flex align-items-center justify-content-center text-white">
-                                <i class="bi bi-image" style="font-size: 2rem;"></i>
-                            </div>
-                        <?php endif; ?>
+            <!-- Boleh klik satu kad untuk ke details -->
+            <div class="recipe-item d-flex align-items-center gap-4" onclick="location.href='modules/recipe/recipedetail.php?id=<?= $r['recipe_id'] ?>'">
+                <div class="recipe-img-wrapper shadow-sm">
+                    <?php $imgSrc = getImageSrc($r['image'], 'assets/images/recipes/'); ?>
+                    <img src="<?= $imgSrc ? htmlspecialchars($imgSrc) : 'https://placehold.co/400x400' ?>" class="w-100 h-100 object-fit-cover">
+                </div>
+                <div class="flex-grow-1">
+                    <span class="badge bg-light text-dark mb-2 rounded-pill border"><?= $r['cuisine'] ?></span>
+                    <h5 class="fw-bold mb-1"><?= htmlspecialchars($r['title']) ?></h5>
+                    <p class="text-muted small mb-3"><?= substr(htmlspecialchars($r['description']), 0, 70) ?>...</p>
+                    <div class="d-flex justify-content-between align-items-center">
+                        <span class="btn btn-dark btn-sm rounded-pill px-4" style="font-size: 0.75rem;">View Recipe</span>
+                        <button class="btn btn-link text-danger p-0 <?= $activeClass ?>" onclick="toggleSave(event, <?= $r['recipe_id'] ?>)">
+                            <i class="bi bi-heart<?= $r['is_saved'] > 0 ? '-fill' : '' ?> fs-5"></i>
+                        </button>
                     </div>
-                    <div class="recipe-info">
-                        <span class="badge mb-1" style="background:var(--green-light); color:var(--green); width:fit-content; font-size: 0.7rem;"><?= $r['cuisine'] ?></span>
-                        <h5 class="fw-bold mb-1"><?= htmlspecialchars($r['title']) ?></h5>
-                        <p class="text-muted small mb-0"><?= substr(htmlspecialchars($r['description']), 0, 80) ?>...</p>
-                    </div>
-                </a>
+                </div>
             </div>
             <?php endforeach; ?>
         </div>
 
+        <!-- MARKETPLACE -->
         <div class="col-lg-5">
-            <div class="section-header">
-                <h4><i class="bi bi-cart3 me-2"></i>Groceries</h4>
-                <a href="modules/shop/index.php" class="view-all">View all →</a>
+            <div class="section-header-box">
+                <h3 class="fw-bold m-0">Pantry Essentials</h3>
             </div>
-
             <div class="row g-3">
                 <?php foreach ($items as $item): ?>
-                <div class="col-6">
-                    <div class="grocery-item-card">
-                        <div class="item-icon-circle">
-                            <?php 
-                                $iconClass = "bi-basket";
-                                if(stripos($item['name'], 'chicken') !== false) $iconClass = "bi-tencent-qq";
-                                if(stripos($item['name'], 'egg') !== false) $iconClass = "bi-egg-fried";
-                                if(stripos($item['name'], 'milk') !== false) $iconClass = "bi-cup-straw";
-                                if(stripos($item['name'], 'veg') !== false) $iconClass = "bi-apple";
-                            ?>
-                            <i class="bi <?= $iconClass ?>"></i>
+                <div class="col-sm-6">
+                    <div class="grocery-card shadow-sm">
+                        <div>
+                            <div class="d-flex justify-content-between align-items-start mb-3">
+                                <div class="p-2 rounded-3 bg-light text-danger">
+                                    <?php 
+                                        $icon = "bi-basket";
+                                        if(stripos($item['name'], 'chicken') !== false) $icon = "bi-tencent-qq";
+                                        if(stripos($item['name'], 'egg') !== false) $icon = "bi-egg-fried";
+                                        if(stripos($item['name'], 'veg') !== false) $icon = "bi-leaf";
+                                    ?>
+                                    <i class="bi <?= $icon ?> fs-4"></i>
+                                </div>
+                                <span class="fw-bold text-dark small">RM <?= number_format($item['price'], 2) ?></span>
+                            </div>
+                            <h6 class="fw-bold text-truncate"><?= htmlspecialchars($item['name']) ?></h6>
                         </div>
-                        <h6><?= htmlspecialchars($item['name']) ?></h6>
-                        <div class="item-price">RM <?= number_format($item['price'], 2) ?></div>
-                        <button onclick="requireLogin(event, 'shop')" class="btn-add-cart">+ Add to Cart</button>
+                        <button onclick="requireLogin(event, 'shop')" class="btn-cart-minimal mt-2">
+                            <i class="bi bi-plus-lg me-1"></i> Add
+                        </button>
                     </div>
                 </div>
                 <?php endforeach; ?>
@@ -293,55 +331,38 @@ $gradients = [
     </div>
 </div>
 
-<a href="modules/shop/cart.php" class="cart-float">
-    <i class="bi bi-cart-fill"></i>
-    <div class="cart-count">0</div>
+<a href="modules/shop/cart.php" class="floating-cart position-fixed text-white text-decoration-none d-flex align-items-center gap-3">
+    <i class="bi bi-bag-fill fs-5"></i>
+    <span class="fw-bold small">Bag (0)</span>
 </a>
 
 <script>
     const isLoggedIn = <?= $isLoggedIn ? 'true' : 'false' ?>;
     
     async function toggleSave(event, recipeId) {
+        event.stopPropagation(); // Elak kad klik ke recipedetails
         event.preventDefault(); 
-        event.stopPropagation();
+        if (!isLoggedIn) { window.location.href = 'modules/auth/login.php'; return; }
 
-        if (!isLoggedIn) {
-            alert("Sila log masuk untuk menyimpan resipi.");
-            window.location.href = 'modules/auth/login.php';
-            return;
-        }
-
-        const btn = event.currentTarget;
-
+        const icon = event.currentTarget.querySelector('i');
         try {
             const formData = new FormData();
             formData.append('recipe_id', recipeId);
-
-            const response = await fetch('modules/recipe/toggle_save.php', {
-                method: 'POST',
-                body: formData
-            });
-
+            const response = await fetch('modules/recipe/toggle_save.php', { method: 'POST', body: formData });
             const data = await response.json();
-
-            if (data.status === 'saved') {
-                btn.classList.add('active');
-            } else if (data.status === 'removed') {
-                btn.classList.remove('active');
+            if (data.status === 'saved') { 
+                icon.classList.replace('bi-heart', 'bi-heart-fill'); 
+                icon.style.transform = "scale(1.3)";
+                setTimeout(() => icon.style.transform = "scale(1)", 200);
             }
-        } catch (error) {
-            console.error('Error:', error);
-        }
+            else { icon.classList.replace('bi-heart-fill', 'bi-heart'); }
+        } catch (error) { console.error('Error:', error); }
     }
 
     function requireLogin(e, type) {
-        if (!isLoggedIn) {
-            e.preventDefault();
-            alert("Sila log masuk untuk menggunakan fungsi ini.");
-            window.location.href = 'modules/auth/login.php';
-        } else {
-            if(type === 'shop') alert("Ditambah ke troli!");
-        }
+        e.stopPropagation(); // Elak kad klik jika ada wrapper
+        if (!isLoggedIn) { window.location.href = 'modules/auth/login.php'; }
+        else { alert("Added to your modern kitchen bag!"); }
     }
 </script>
 

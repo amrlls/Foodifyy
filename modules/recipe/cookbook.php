@@ -1,896 +1,710 @@
-//adam <!DOCTYPE html>
+<?php
+session_start();
+
+// Database connection
+require_once __DIR__ . '/../../config/database.php';
+require_once __DIR__ . '/../../config/upload_helper.php';
+
+$isLoggedIn = isset($_SESSION['user_id']);
+$userId     = $_SESSION['user_id'] ?? 0;
+
+if (!$isLoggedIn) {
+    header("Location: ../auth/login.php");
+    exit();
+}
+
+// --- LOGIC SIMPAN RECIPE (POST) ---
+if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['submit_recipe'])) {
+    $title        = $_POST['title'];
+    $cuisine      = $_POST['cuisine'];
+    $meal_type    = $_POST['meal_type']; 
+    $cooking_time = $_POST['cooking_time'];
+    $instructions = $_POST['instructions'];
+    $ingredients  = $_POST['ingredients'];
+    $description  = $_POST['description'] ?? '';
+    
+    $image_url = "";
+    if (isset($_FILES['recipe_image']) && $_FILES['recipe_image']['error'] == 0) {
+        $image_url = uploadToCloudinary($_FILES['recipe_image']['tmp_name'], 'foodify/user_recipes');
+        $conn->ping();
+        if (!$image_url) {
+            $ext = pathinfo($_FILES['recipe_image']['name'], PATHINFO_EXTENSION);
+            $image_url = "user_" . time() . "." . $ext;
+            move_uploaded_file($_FILES['recipe_image']['tmp_name'], "../../assets/images/recipes/" . $image_url);
+        }
+    }
+
+    $stmt_insert = $conn->prepare("INSERT INTO created_recipes (user_id, title, cuisine, meal_type, cooking_time, ingredients, instructions, image, description) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)");
+    $stmt_insert->bind_param("issssssss", $userId, $title, $cuisine, $meal_type, $cooking_time, $ingredients, $instructions, $image_url, $description);
+    
+    if ($stmt_insert->execute()) {
+        header("Location: cookbook.php?success=1");
+        exit();
+    }
+}
+
+// --- LOGIC UPDATE RECIPE ---
+if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['update_recipe'])) {
+    $cr_id        = (int)$_POST['cr_id'];
+    $title        = $_POST['title'];
+    $description  = $_POST['description'] ?? '';
+    $cuisine      = $_POST['cuisine'];
+    $meal_type    = $_POST['meal_type'];
+    $cooking_time = $_POST['cooking_time'];
+    $ingredients  = $_POST['ingredients'];
+    $instructions = $_POST['instructions'];
+
+    if (isset($_FILES['recipe_image']) && $_FILES['recipe_image']['error'] == 0) {
+        // Ambil gambar lama dari DB dulu
+        $stmt_old = $conn->prepare("SELECT image FROM created_recipes WHERE cr_id = ? AND user_id = ?");
+        $stmt_old->bind_param("ii", $cr_id, $userId);
+        $stmt_old->execute();
+        $old_data  = $stmt_old->get_result()->fetch_assoc();
+        $old_image = $old_data['image'] ?? '';
+
+        // Upload gambar baru ke Cloudinary
+        $new_image = uploadToCloudinary($_FILES['recipe_image']['tmp_name'], 'foodify/user_recipes');
+        $conn->ping();
+
+        // Delete gambar lama dari Cloudinary kalau upload baru berjaya
+        if ($new_image && !empty($old_image)) {
+            deleteFromCloudinary($old_image);
+        }
+
+        // Fallback local kalau Cloudinary gagal
+        if (!$new_image) {
+            $ext = pathinfo($_FILES['recipe_image']['name'], PATHINFO_EXTENSION);
+            $new_image = "user_" . time() . "." . $ext;
+            move_uploaded_file($_FILES['recipe_image']['tmp_name'], "../../assets/images/recipes/" . $new_image);
+        }
+
+        $stmt = $conn->prepare("UPDATE created_recipes SET title=?, description=?, cuisine=?, meal_type=?, cooking_time=?, ingredients=?, instructions=?, image=? WHERE cr_id=? AND user_id=?");
+        $stmt->bind_param("ssssssssii", $title, $description, $cuisine, $meal_type, $cooking_time, $ingredients, $instructions, $new_image, $cr_id, $userId);
+    } else {
+        $stmt = $conn->prepare("UPDATE created_recipes SET title=?, description=?, cuisine=?, meal_type=?, cooking_time=?, ingredients=?, instructions=? WHERE cr_id=? AND user_id=?");
+        $stmt->bind_param("sssssssii", $title, $description, $cuisine, $meal_type, $cooking_time, $ingredients, $instructions, $cr_id, $userId);
+    }
+
+    if ($stmt->execute()) {
+        header("Location: cookbook.php?updated=1");
+        exit();
+    }
+}
+
+// --- LOGIC DELETE RECIPE ---
+if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['delete_recipe'])) {
+    $cr_id = (int)$_POST['cr_id'];
+
+    // Ambil gambar lama sebelum delete
+    $stmt_old = $conn->prepare("SELECT image FROM created_recipes WHERE cr_id = ? AND user_id = ?");
+    $stmt_old->bind_param("ii", $cr_id, $userId);
+    $stmt_old->execute();
+    $old_data  = $stmt_old->get_result()->fetch_assoc();
+    $old_image = $old_data['image'] ?? '';
+
+    // Delete dari DB
+    $stmt = $conn->prepare("DELETE FROM created_recipes WHERE cr_id = ? AND user_id = ?");
+    $stmt->bind_param("ii", $cr_id, $userId);
+    if ($stmt->execute()) {
+        // Delete gambar dari Cloudinary selepas DB berjaya delete
+        deleteFromCloudinary($old_image);
+        header("Location: cookbook.php?deleted=1");
+        exit();
+    }
+}
+
+// Data Navbar
+$stmt_nav = $conn->prepare("SELECT username, profile_image, role FROM users WHERE user_id = ?");
+$stmt_nav->bind_param("i", $userId);
+$stmt_nav->execute();
+$user_nav = $stmt_nav->get_result()->fetch_assoc();
+$username = $user_nav['username'] ?? 'Guest';
+$nav_profile_img = $user_nav['profile_image'] ?? '';
+$nav_role = $user_nav['role'] ?? 'Customer';
+
+// Tarik data My Creations
+$stmt_my = $conn->prepare("SELECT * FROM created_recipes WHERE user_id = ? ORDER BY created_at DESC");
+$stmt_my->bind_param("i", $userId);
+$stmt_my->execute();
+$my_recipes = $stmt_my->get_result()->fetch_all(MYSQLI_ASSOC);
+
+// Tarik data Saved Recipes
+$stmt_saved = $conn->prepare("
+    SELECT r.*, 1 as is_saved FROM recipes r 
+    JOIN saved_recipes s ON r.recipe_id = s.recipe_id 
+    WHERE s.user_id = ?
+");
+$stmt_saved->bind_param("i", $userId);
+$stmt_saved->execute();
+$saved_recipes = $stmt_saved->get_result()->fetch_all(MYSQLI_ASSOC);
+
+$gradients = [
+    'Melayu'  => 'linear-gradient(135deg, #2E7D32, #9FA825)',
+    'Western' => 'linear-gradient(135deg, #c0392b, #e74c3c)',
+    'Asian'   => 'linear-gradient(135deg, #e67e22, #f39c12)',
+];
+
+$icons = [
+    'Breakfast' => 'bi-egg-fried',
+    'Lunch'     => 'bi-cup-straw',
+    'Dinner'    => 'bi-egg',
+    'Dessert'   => 'bi-cake2',
+    'Snack'     => 'bi-apple',
+    'Drinks'    => 'bi-cup',
+];
+?>
+
+<!DOCTYPE html>
 <html lang="en">
-    <head>
-        <meta charset="UTF-8">
-        <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        <title>My Cookbooks</title>
-        <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-        <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
-        <style>
-            :root {
-                --primary-green: #2E7D32;
-                --primary-orange: #FF8F00;
-                --primary-lime: #9FA825;
-                --dark-text: #212121;
-                --sidebar-width: 280px;
-            }
-            body {
-                background: #f5f5f5;
-                font-family: system-ui, sans-serif;
-                margin: 0;
-                padding: 0;
-            }
-            .sidebar {
-                position: fixed;
-                left: 0;
-                top: 0;
-                width: var(--sidebar-width);
-                height: 100vh;
-                background: white;
-                box-shadow: 2px 0 12px rgba(0,0,0,0.05);
-                padding: 2rem 1rem;
-                overflow-y: auto;
-                z-index: 1000;
-            }
-            .sidebar-logo {
-                text-align: center;
-                margin-bottom: 2rem;
-            }
-            .sidebar-logo img {
-                width: 80px;
-                height: 80px;
-                object-fit: cover;
-                border-radius: 20px;
-            }
-            .sidebar-logo h2 {
-                font-weight: 800;
-                color: var(--primary-green);
-                margin-top: 0.5rem;
-                font-size: 1.5rem;
-            }
-            .sidebar-nav {
-                list-style: none;
-                padding: 0;
-                margin: 0;
-            }
-            .sidebar-nav li {
-                margin-bottom: 0.5rem;
-            }
-            .sidebar-nav a {
-                display: flex;
-                align-items: center;
-                gap: 12px;
-                padding: 12px 16px;
-                color: var(--dark-text);
-                text-decoration: none;
-                border-radius: 12px;
-                transition: all 0.2s;
-                font-weight: 500;
-            }
-            .sidebar-nav a:hover, .sidebar-nav a.active {
-                background: var(--primary-orange);
-                color: white;
-            }
-            .sidebar-nav a i {
-                font-size: 1.25rem;
-                width: 24px;
-            }
-            .user-info {
-                margin-top: 2rem;
-                padding-top: 1rem;
-                border-top: 1px solid #e0e0e0;
-            }
-            .user-info .user-avatar {
-                display: flex;
-                align-items: center;
-                gap: 12px;
-                margin-bottom: 1rem;
-            }
-            .user-info .user-avatar i {
-                font-size: 2rem;
-                color: var(--primary-green);
-            }
-            .login-buttons {
-                display: flex;
-                flex-direction: column;
-                gap: 0.5rem;
-            }
-            .btn-login-side {
-                background: var(--primary-orange);
-                color: white;
-                border: none;
-                padding: 8px;
-                border-radius: 50px;
-                font-weight: 600;
-                text-align: center;
-                text-decoration: none;
-            }
-            .btn-register-side {
-                background: transparent;
-                border: 1.5px solid var(--primary-green);
-                color: var(--primary-green);
-                padding: 8px;
-                border-radius: 50px;
-                font-weight: 600;
-                text-align: center;
-                text-decoration: none;
-            }
-            .main-content {
-                margin-left: var(--sidebar-width);
-                padding: 2rem;
-                min-height: 100vh;
-            }
-            .top-bar {
-                margin-bottom: 2rem;
-            }
-            .top-bar h1 {
-                font-size: 1.8rem;
-                font-weight: 700;
-                margin-bottom: 0.5rem;
-            }
-            .section-title {
-                font-size: 1.3rem;
-                font-weight: 700;
-                margin-bottom: 1.5rem;
-                display: flex;
-                align-items: center;
-                gap: 0.5rem;
-            }
-            .section-title i {
-                color: var(--primary-orange);
-            }
-            .recipe-grid {
-                display: grid;
-                grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-                gap: 1.5rem;
-                margin-bottom: 3rem;
-            }
-            .recipe-card {
-                background: white;
-                border-radius: 20px;
-                overflow: hidden;
-                transition: all 0.2s;
-                cursor: pointer;
-                box-shadow: 0 2px 8px rgba(0,0,0,0.05);
-                position: relative;
-            }
-            .recipe-card:hover {
-                transform: translateY(-5px);
-                box-shadow: 0 12px 24px rgba(0,0,0,0.1);
-            }
-            .delete-icon {
-                position: absolute;
-                top: 10px;
-                right: 10px;
-                background: rgba(255,255,255,0.9);
-                border-radius: 50%;
-                width: 30px;
-                height: 30px;
-                display: flex;
-                align-items: center;
-                justify-content: center;
-                cursor: pointer;
-                color: #dc3545;
-                z-index: 2;
-            }
-            .recipe-img {
-                height: 160px;
-                background: linear-gradient(135deg, var(--primary-green), var(--primary-lime));
-                display: flex;
-                align-items: center;
-                justify-content: center;
-            }
-            .recipe-img i {
-                font-size: 3.5rem;
-                color: white;
-            }
-            .recipe-info {
-                padding: 1rem;
-            }
-            .recipe-title {
-                font-weight: 700;
-                margin-bottom: 0.25rem;
-            }
-            .recipe-meta {
-                font-size: 0.75rem;
-                color: #999;
-                display: flex;
-                justify-content: space-between;
-            }
-            .empty-state {
-                text-align: center;
-                padding: 2rem;
-                color: #aaa;
-                grid-column: 1 / -1;
-            }
-            .empty-state i {
-                font-size: 3rem;
-                margin-bottom: 1rem;
-                color: #ccc;
-            }
-            .footer {
-                background: #1a1a1a;
-                color: #aaa;
-                padding: 2rem 0;
-                margin-top: 2rem;
-                text-align: center;
-            }
-            .floating-cart {
-                position: fixed;
-                bottom: 30px;
-                right: 30px;
-                width: 60px;
-                height: 60px;
-                background: var(--primary-orange);
-                border-radius: 50%;
-                display: flex;
-                align-items: center;
-                justify-content: center;
-                box-shadow: 0 4px 15px rgba(0,0,0,0.2);
-                cursor: pointer;
-                transition: all 0.3s ease;
-                z-index: 999;
-                text-decoration: none;
-            }
-            .floating-cart:hover {
-                transform: scale(1.1);
-                background: #e07f00;
-            }
-            .floating-cart i {
-                font-size: 1.8rem;
-                color: white;
-            }
-            .cart-badge {
-                position: absolute;
-                top: -5px;
-                right: -5px;
-                background: #dc3545;
-                color: white;
-                border-radius: 50%;
-                width: 22px;
-                height: 22px;
-                display: flex;
-                align-items: center;
-                justify-content: center;
-                font-size: 0.7rem;
-                font-weight: 700;
-            }
-            @media (max-width: 768px) {
-                .sidebar { transform: translateX(-100%); transition: transform 0.3s; }
-                .sidebar.open { transform: translateX(0); }
-                .main-content { margin-left: 0; padding: 1rem; }
-                .menu-toggle {
-                    display: block;
-                    position: fixed;
-                    top: 1rem;
-                    left: 1rem;
-                    z-index: 1001;
-                    background: var(--primary-orange);
-                    color: white;
-                    border: none;
-                    border-radius: 8px;
-                    padding: 8px 12px;
-                }
-                .floating-cart { bottom: 20px; right: 20px; width: 50px; height: 50px; }
-                .floating-cart i { font-size: 1.5rem; }
-            }
-            @media (min-width: 769px) { .menu-toggle { display: none; } }
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>My Cookbooks – Foodify</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800;900&family=Playfair+Display:wght@700;800&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --green: #2E7D32; --green-light: #E8F5E9;
+            --orange: #FF8F00; --dark: #1A1A1A;
+            --muted: #777; --border: #EEEEEE;
+            --sidebar-w: 270px;
+        }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Nunito', sans-serif; background: #F7F9F7; color: var(--dark); }
 
-            .add-recipe-card {
-                background: white;
-                border-radius: 20px;
-                border: 2px dashed #ccc;
-                display: flex;
-                flex-direction: column;
-                align-items: center;
-                justify-content: center;
-                gap: 0.75rem;
-                min-height: 220px;
-                cursor: pointer;
-                transition: all 0.2s;
-                color: #aaa;
-                font-weight: 600;
-                font-size: 0.95rem;
-                box-shadow: 0 2px 8px rgba(0,0,0,0.05);
-            }
-            .add-recipe-card:hover {
-                border-color: var(--primary-green);
-                color: var(--primary-green);
-                transform: translateY(-5px);
-                box-shadow: 0 12px 24px rgba(0,0,0,0.08);
-            }
-            .add-recipe-card i { font-size: 2.5rem; }
+        /* ── SIDEBAR ── */
+        .sidebar {
+            position: fixed; left: 0; top: 0; width: var(--sidebar-w); height: 100vh;
+            background: white; box-shadow: 2px 0 16px rgba(0,0,0,0.06);
+            padding: 1.8rem 1rem; overflow-y: auto; z-index: 1000;
+            display: flex; flex-direction: column;
+        }
+        .sidebar-logo {
+            display: flex; flex-direction: column; align-items: center; text-align: center; gap: 12px;
+            margin-bottom: 2rem; padding: 0 8px;
+        }
+        .sidebar-logo img { width: 75px; height: 75px; object-fit: contain; border-radius: 14px; }
+        .sidebar-logo .logo-text h2 { font-weight: 900; font-size: 1.6rem; color: var(--green); line-height: 1; margin-bottom: 4px; }
+        .sidebar-logo .logo-text span { font-size: 0.7rem; color: var(--muted); font-weight: 600; }
 
-            /* ── Category grid ── */
-            .cat-grid {
-                display: grid;
-                grid-template-columns: 1fr 1fr;
-                gap: 10px;
-                margin-bottom: 1.25rem;
-            }
-            .cat-item {
-                padding: 10px 14px;
-                border: 1.5px solid #e0e0e0;
-                border-radius: 12px;
-                background: #fff;
-                cursor: pointer;
-                display: flex;
-                align-items: center;
-                gap: 10px;
-                font-size: 14px;
-                font-family: inherit;
-                font-weight: 500;
-                transition: all 0.15s;
-                color: #333;
-            }
-            .cat-item:hover { border-color: var(--primary-green); background: #f1f8f1; }
-            .cat-item.selected {
-                border-color: var(--primary-green);
-                background: #e8f5e9;
-                color: var(--primary-green);
-                font-weight: 700;
-            }
-            .cat-item i { font-size: 1.2rem; }
+        .sidebar-nav { list-style: none; padding: 0; flex: 1; }
+        .sidebar-nav li { margin-bottom: 4px; }
+        .sidebar-nav a {
+            display: flex; align-items: center; gap: 12px; padding: 11px 14px;
+            color: var(--dark); text-decoration: none; border-radius: 12px;
+            font-weight: 600; font-size: 0.88rem; transition: all 0.18s;
+        }
+        .sidebar-nav a i { font-size: 1.15rem; width: 22px; }
+        .sidebar-nav a:hover, .sidebar-nav a.active { background: var(--orange); color: white; }
 
-            /* ── Step visibility ── */
-            .step { display: none; }
-            .step.active { display: block; }
+        .sidebar-bottom { border-top: 1px solid var(--border); padding-top: 1rem; margin-top: 1rem; }
+        .user-row {
+            display: flex; align-items: center; gap: 10px; padding: 10px 14px;
+            background: var(--green-light); border-radius: 12px; margin-bottom: 10px;
+            cursor: pointer; transition: all 0.2s ease-out;
+        }
+        .user-row:hover { background-color: #DDEEE6 !important; transform: translateY(-3px); box-shadow: 0 4px 10px rgba(0,0,0,0.05); }
+        .user-avatar-img { width: 35px; height: 35px; border-radius: 50%; object-fit: cover; }
+        .user-name { font-weight: 700; font-size: 0.88rem; }
+        .user-role { font-size: 0.7rem; color: var(--muted); }
 
-            /* ── Step progress indicator ── */
-            .step-indicator {
-                display: flex;
-                align-items: center;
-                justify-content: center;
-                gap: 0;
-                margin-bottom: 1.25rem;
-            }
-            .step-dot {
-                width: 28px;
-                height: 28px;
-                border-radius: 50%;
-                background: #e0e0e0;
-                color: #999;
-                display: flex;
-                align-items: center;
-                justify-content: center;
-                font-size: 12px;
-                font-weight: 700;
-                transition: all 0.2s;
-                flex-shrink: 0;
-            }
-            .step-dot.active {
-                background: var(--primary-green);
-                color: white;
-            }
-            .step-dot.done {
-                background: var(--primary-lime);
-                color: white;
-            }
-            .step-line {
-                flex: 1;
-                height: 2px;
-                background: #e0e0e0;
-                max-width: 40px;
-            }
-            .step-line.done { background: var(--primary-lime); }
+        .btn-side { display: block; padding: 9px; border-radius: 50px; font-weight: 700; font-size: 0.85rem; text-align: center; text-decoration: none; margin-bottom: 6px; transition: 0.2s; }
+        .btn-side-logout { background: #FEE2E2; color: #DC2626; }
+        .btn-side-logout:hover { background: #DC2626; color: white; }
 
-            /* ── Ingredient / Step rows ── */
-            .ingredient-row, .step-row {
-                display: flex;
-                gap: 8px;
-                margin-bottom: 8px;
-                align-items: center;
-            }
-            .ingredient-row input, .step-row textarea {
-                flex: 1;
-                border: 1.5px solid #e0e0e0;
-                border-radius: 10px;
-                padding: 8px 12px;
-                font-size: 14px;
-                font-family: inherit;
-                outline: none;
-                transition: border 0.15s;
-                resize: none;
-            }
-            .ingredient-row input:focus, .step-row textarea:focus {
-                border-color: var(--primary-green);
-            }
-            .remove-btn {
-                background: none;
-                border: none;
-                color: #dc3545;
-                font-size: 1.1rem;
-                cursor: pointer;
-                padding: 4px;
-                line-height: 1;
-                flex-shrink: 0;
-            }
-            .add-row-btn {
-                background: none;
-                border: 1.5px dashed #ccc;
-                border-radius: 10px;
-                padding: 7px 14px;
-                font-size: 13px;
-                font-family: inherit;
-                color: #888;
-                cursor: pointer;
-                width: 100%;
-                transition: all 0.15s;
-                margin-bottom: 1rem;
-            }
-            .add-row-btn:hover {
-                border-color: var(--primary-green);
-                color: var(--primary-green);
-            }
+        /* ── MAIN CONTENT ── */
+        .main-content { margin-left: var(--sidebar-w); padding: 2.5rem; min-height: 100vh; }
+        .top-bar h1 { font-family: 'Playfair Display', serif; font-size: 2.5rem; font-weight: 800; }
 
-            /* ── Cook time pills ── */
-            .time-pills {
-                display: flex;
-                flex-wrap: wrap;
-                gap: 8px;
-                margin-bottom: 1rem;
-            }
-            .time-pill {
-                padding: 6px 16px;
-                border: 1.5px solid #e0e0e0;
-                border-radius: 50px;
-                font-size: 13px;
-                font-family: inherit;
-                font-weight: 500;
-                cursor: pointer;
-                transition: all 0.15s;
-                background: white;
-                color: #555;
-            }
-            .time-pill:hover { border-color: var(--primary-orange); color: var(--primary-orange); }
-            .time-pill.selected {
-                background: var(--primary-orange);
-                border-color: var(--primary-orange);
-                color: white;
-                font-weight: 700;
-            }
+        /* ── RECIPE GRID & CARD ── */
+        .section-header { border-left: 5px solid var(--orange); padding-left: 15px; margin: 40px 0 25px; font-weight: 800; font-size: 1.2rem; text-transform: uppercase; letter-spacing: 1px; }
+        
+        .recipe-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 1.5rem; }
+        .recipe-card { background: white; border-radius: 20px; overflow: hidden; box-shadow: 0 2px 10px rgba(0,0,0,0.05); transition: 0.22s; border: 1.5px solid transparent; position: relative; height: 100%; }
+        .recipe-card:hover { transform: translateY(-5px); box-shadow: 0 12px 28px rgba(0,0,0,0.1); border-color: var(--orange); }
+        
+        .btn-save-recipe {
+            position: absolute; top: 12px; left: 12px; z-index: 10;
+            background: white; border: none; width: 35px; height: 35px; border-radius: 50%;
+            display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 8px rgba(0,0,0,0.12);
+            color: #ccc; cursor: pointer; transition: 0.2s;
+        }
+        .btn-save-recipe.active { color: #ff4757; }
+        .btn-save-recipe.active i::before { content: "\f415"; }
 
-            .form-label-sm {
-                font-size: 13px;
-                color: #888;
-                font-weight: 500;
-                margin-bottom: 6px;
-                display: block;
-            }
-            .modal-body { max-height: 70vh; overflow-y: auto; }
+        .btn-edit-recipe {
+            position: absolute; top: 12px; left: 12px; z-index: 10;
+            background: white; border: none; width: 35px; height: 35px; border-radius: 50%;
+            display: flex; align-items: center; justify-content: center;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.12);
+            color: var(--green); cursor: pointer; transition: 0.2s;
+        }
+        .btn-edit-recipe:hover { background: var(--green); color: white; }
 
-            /* recipe card meta tags */
-            .meta-tag {
-                display: inline-flex;
-                align-items: center;
-                gap: 3px;
-                font-size: 0.7rem;
-                background: #f0f0f0;
-                border-radius: 20px;
-                padding: 2px 8px;
-                color: #666;
-            }
-        </style>
-    </head>
-    <body>
-        <button class="menu-toggle" id="menuToggle"><i class="bi bi-list"></i></button>
-        <div class="sidebar" id="sidebar">
-            <div class="sidebar-logo">
-                <img src="Foodify Icon.png" alt="Foodify Logo">
-                <h2>FOODIFY</h2>
-            </div>
-            <ul class="sidebar-nav">
-                <li><a href="index.html"><i class="bi bi-house"></i> HOME</a></li>
-                <li><a href="recipes.html"><i class="bi bi-journal-bookmark-fill"></i> RECIPES</a></li>
-                <li><a href="shop.html"><i class="bi bi-bag"></i> SHOP</a></li>
-                <li><a href="myCookbooks.html" class="active"><i class="bi bi-bookmark-heart-fill"></i> MY COOKBOOKS</a></li>
-                <li><a href="myOrders.html"><i class="bi bi-truck"></i> MY ORDERS</a></li>
-            </ul>
-            <div class="user-info">
-                <div class="user-avatar"><i class="bi bi-person-circle"></i><span>Guest User</span></div>
-                <div class="login-buttons">
-                    <a href="loginPage.html" class="btn-login-side">Login</a>
-                    <a href="registerPage.html" class="btn-register-side">Register</a>
+        .btn-delete-recipe {
+            position: absolute; top: 12px; left: 52px; z-index: 10;
+            background: white; border: none; width: 35px; height: 35px; border-radius: 50%;
+            display: flex; align-items: center; justify-content: center;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.12);
+            color: #DC2626; cursor: pointer; transition: 0.2s;
+        }
+        .btn-delete-recipe:hover { background: #DC2626; color: white; }
+
+        /* Custom Delete Confirm Popup */
+        .confirm-overlay {
+            position: fixed; inset: 0; background: rgba(0,0,0,0.45);
+            z-index: 9999; display: flex; align-items: center; justify-content: center;
+            opacity: 0; pointer-events: none; transition: 0.2s;
+        }
+        .confirm-overlay.show { opacity: 1; pointer-events: all; }
+        .confirm-box {
+            background: white; border-radius: 24px; padding: 2rem;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.15); text-align: center;
+            width: 100%; max-width: 380px; transform: scale(0.9); transition: 0.2s;
+        }
+        .confirm-overlay.show .confirm-box { transform: scale(1); }
+        .confirm-icon {
+            width: 65px; height: 65px; background: #FEE2E2; border-radius: 50%;
+            display: flex; align-items: center; justify-content: center;
+            margin: 0 auto 1rem;
+        }
+        .confirm-icon i { font-size: 1.8rem; color: #DC2626; }
+        .confirm-title { font-weight: 800; font-size: 1.2rem; margin-bottom: 0.4rem; }
+        .confirm-msg { font-size: 0.85rem; color: var(--muted); margin-bottom: 1.5rem; }
+        .confirm-actions { display: flex; gap: 10px; justify-content: center; }
+        .btn-confirm-cancel {
+            padding: 10px 24px; border-radius: 50px; border: 1.5px solid #eee;
+            background: white; font-weight: 700; font-size: 0.85rem; cursor: pointer; transition: 0.2s;
+        }
+        .btn-confirm-cancel:hover { background: #f5f5f5; }
+        .btn-confirm-delete {
+            padding: 10px 24px; border-radius: 50px; border: none;
+            background: #DC2626; color: white; font-weight: 700; font-size: 0.85rem; cursor: pointer; transition: 0.2s;
+        }
+        .btn-confirm-delete:hover { background: #b91c1c; }
+
+        .recipe-img { height: 170px; display: flex; align-items: center; justify-content: center; position: relative; }
+        .recipe-img img { width: 100%; height: 100%; object-fit: cover; }
+        .recipe-img i { font-size: 3.5rem; color: white; }
+        .badge-cuisine { position: absolute; top: 10px; right: 10px; background: rgba(0,0,0,0.4); color: white; font-size: 0.65rem; font-weight: 800; padding: 4px 10px; border-radius: 50px; }
+
+        .recipe-info { padding: 1.2rem; }
+        .recipe-title { font-weight: 800; font-size: 1.1rem; margin-bottom: 0.4rem; color: var(--dark); }
+        .recipe-desc {
+            font-size: 0.8rem; color: var(--muted); line-height: 1.5;
+            display: -webkit-box; -webkit-line-clamp: 2; line-clamp: 2;
+            -webkit-box-orient: vertical; overflow: hidden; margin-bottom: 0.8rem;
+        }
+        .recipe-footer { display: flex; align-items: center; justify-content: space-between; }
+        .recipe-tag { background: var(--green-light); color: var(--green); font-size: 0.7rem; font-weight: 800; padding: 3px 12px; border-radius: 50px; }
+        .recipe-time { font-size: 0.75rem; color: #aaa; font-weight: 600; }
+
+        .btn-create { background: var(--green); color: white; border-radius: 50px; padding: 12px 25px; border: none; font-weight: 700; transition: 0.3s; }
+        .btn-create:hover { background: #1B5E20; color: white; box-shadow: 0 4px 12px rgba(46,125,50,0.3); }
+
+        #createRecipeModal .modal-header,
+        #editRecipeModal .modal-header { padding: 1.2rem 1.5rem 0.5rem; }
+        #createRecipeModal .modal-body,
+        #editRecipeModal .modal-body { padding: 0.5rem 1.5rem 1.5rem; }
+        #createRecipeModal .form-control,
+        #createRecipeModal .form-select,
+        #editRecipeModal .form-control,
+        #editRecipeModal .form-select { padding: 8px 12px; font-size: 0.88rem; }
+
+        .modal-content { border-radius: 25px; border: none; }
+        .modal-header { border-bottom: none; padding: 2rem 2rem 1rem; }
+        .modal-body { padding: 1rem 2rem 2rem; }
+        .form-control, .form-select { border-radius: 12px; padding: 12px; border: 1.5px solid #eee; }
+        .form-control:focus { border-color: var(--green); box-shadow: none; }
+
+        @media (max-width: 768px) {
+            .sidebar { transform: translateX(-100%); transition: 0.3s; }
+            .main-content { margin-left: 0; padding: 1rem; }
+        }
+    </style>
+</head>
+<body>
+
+<div class="sidebar">
+    <div class="sidebar-logo">
+        <img src="../../assets/images/logo.png" alt="Foodify">
+        <div class="logo-text"><h2>Foodify</h2><span>Recipes + Groceries</span></div>
+    </div>
+    <ul class="sidebar-nav">
+        <li><a href="../../index.php"><i class="bi bi-house-fill"></i> Home</a></li>
+        <li><a href="recipes.php"><i class="bi bi-journal-bookmark-fill"></i> Recipes</a></li>
+        <li><a href="../shop/index.php"><i class="bi bi-bag-fill"></i> Shop</a></li>
+        <li><a href="cookbook.php" class="active"><i class="bi bi-bookmark-heart-fill"></i> My Cookbooks</a></li>
+        <li><a href="../order/index.php"><i class="bi bi-truck"></i> My Orders</a></li>
+    </ul>
+    <div class="sidebar-bottom">
+        <a href="../profile/profile.php" class="text-decoration-none" style="color: inherit;">
+            <div class="user-row">
+                <?php 
+                $imgPath = "../../assets/images/profiles/" . $nav_profile_img;
+                if (!empty($nav_profile_img) && file_exists($imgPath)): ?>
+                    <img src="<?= $imgPath ?>" class="user-avatar-img">
+                <?php else: ?>
+                    <i class="bi bi-person-circle" style="font-size:1.6rem; color:var(--green);"></i>
+                <?php endif; ?>
+                <div>
+                    <div class="user-name"><?= htmlspecialchars($username) ?></div>
+                    <div class="user-role"><?= htmlspecialchars($nav_role) ?></div>
                 </div>
             </div>
-        </div>
-
-        <div class="main-content">
-            <div class="top-bar">
-                <h1>My Cookbooks</h1>
-                <p class="text-secondary">Manage your personal recipes and saved favorites</p>
-            </div>
-
-            <div class="section-title">
-                <i class="bi bi-journal-bookmark-fill"></i>
-                <span>My Recipes</span>
-            </div>
-            <div class="recipe-grid" id="myRecipesGrid">
-                <div class="add-recipe-card" id="addRecipeBtn" onclick="openAddModal()">
-                    <i class="bi bi-plus-circle"></i>
-                    <span>Add New Recipe</span>
-                </div>
-            </div>
-
-            <div class="section-title">
-                <i class="bi bi-bookmark-heart-fill"></i>
-                <span>Saved Recipes</span>
-            </div>
-            <div class="recipe-grid" id="savedRecipesGrid"></div>
-        </div>
-
-        <footer class="footer">
-            <div class="container">
-                <p class="mb-0">© 2026 Foodify. All rights reserved.</p>
-            </div>
-        </footer>
-
-        <a href="cart.html" class="floating-cart">
-            <i class="bi bi-cart"></i>
-            <span class="cart-badge" id="cartBadge">0</span>
         </a>
+        <a href="../auth/logout.php" class="btn-side btn-side-logout"><i class="bi bi-box-arrow-left"></i> Logout</a>
+    </div>
+</div>
 
-        <!-- ══════════════════════════════════════════════════════════════
-             Add Recipe Modal — 3-step form
-        ═══════════════════════════════════════════════════════════════ -->
-        <div class="modal fade" id="addRecipeModal" tabindex="-1" aria-hidden="true">
-            <div class="modal-dialog modal-dialog-centered modal-lg">
-                <div class="modal-content" style="border-radius:20px;border:none;">
-                    <div class="modal-header border-0 pb-0">
-                        <h5 class="modal-title fw-bold">Add New Recipe</h5>
-                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+<div class="main-content">
+
+    <?php if (isset($_GET['success'])): ?>
+        <div class="alert alert-success rounded-3 mb-3">
+            <i class="bi bi-check-circle-fill me-2"></i> Recipe created successfully!
+        </div>
+    <?php endif; ?>
+
+    <?php if (isset($_GET['updated'])): ?>
+        <div class="alert alert-success rounded-3 mb-3">
+            <i class="bi bi-check-circle-fill me-2"></i> Recipe updated successfully!
+        </div>
+    <?php endif; ?>
+
+    <?php if (isset($_GET['deleted'])): ?>
+        <div class="alert alert-danger rounded-3 mb-3">
+            <i class="bi bi-trash-fill me-2"></i> Recipe deleted successfully!
+        </div>
+    <?php endif; ?>
+
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h1>My Cookbooks</h1>
+            <p class="text-muted">Manage your own culinary creations and saved favorites</p>
+        </div>
+        <button class="btn-create" data-bs-toggle="modal" data-bs-target="#createRecipeModal">
+            <i class="bi bi-plus-lg"></i> New Recipe
+        </button>
+    </div>
+
+    <!-- MY CREATIONS SECTION -->
+    <div class="section-header">My Creations</div>
+    <div class="recipe-grid">
+        <?php if (empty($my_recipes)): ?>
+            <p class="text-muted ps-3">You haven't created any recipes yet.</p>
+        <?php endif; ?>
+
+        <?php foreach ($my_recipes as $recipe): 
+            $grad = $gradients[$recipe['cuisine']] ?? 'linear-gradient(135deg, #2E7D32, #9FA825)';
+            $icon = $icons[$recipe['meal_type']] ?? 'bi-journal-text';
+        ?>
+            <div class="recipe-card">
+                <button class="btn-edit-recipe" onclick="openEditModal(<?= htmlspecialchars(json_encode($recipe)) ?>)">
+                    <i class="bi bi-pencil-fill"></i>
+                </button>
+
+                <button class="btn-delete-recipe" onclick="confirmDelete(<?= $recipe['cr_id'] ?>)">
+                    <i class="bi bi-trash-fill"></i>
+                </button>
+
+                <a href="recipedetail.php?id=<?= $recipe['cr_id'] ?>&type=user" class="text-decoration-none" style="color:inherit; display:block;">
+                    <div class="recipe-img" style="background: <?= $grad ?>;">
+                        <?php $imgSrc = getImageSrc($recipe['image'], '../../assets/images/recipes/'); ?>
+                        <?php if ($imgSrc): ?>
+                            <img src="<?= htmlspecialchars($imgSrc) ?>" alt="">
+                        <?php else: ?>
+                            <i class="bi <?= $icon ?>"></i>
+                        <?php endif; ?>
+                        <span class="badge-cuisine"><?= htmlspecialchars($recipe['cuisine']) ?></span>
                     </div>
-                    <div class="modal-body pt-2">
-
-                        <!-- Progress dots -->
-                        <div class="step-indicator">
-                            <div class="step-dot active" id="dot1">1</div>
-                            <div class="step-line" id="line12"></div>
-                            <div class="step-dot" id="dot2">2</div>
-                            <div class="step-line" id="line23"></div>
-                            <div class="step-dot" id="dot3">3</div>
+                    <div class="recipe-info">
+                        <div class="recipe-title"><?= htmlspecialchars($recipe['title']) ?></div>
+                        <div class="recipe-desc"><?= htmlspecialchars($recipe['description'] ?? 'No description provided.') ?></div>
+                        <div class="recipe-footer">
+                            <span class="recipe-tag"><?= htmlspecialchars($recipe['meal_type']) ?></span>
+                            <span class="recipe-time"><i class="bi bi-clock"></i> <?= htmlspecialchars($recipe['cooking_time']) ?>m</span>
                         </div>
-
-                        <!-- ── STEP 1: Category ── -->
-                        <div class="step active" id="step1">
-                            <p class="text-secondary mb-3" style="font-size:14px;">Choose a category for your recipe</p>
-                            <div class="cat-grid">
-                                <button class="cat-item" onclick="selectCat(this,'Main Dish','bi-bowl-hot')"><i class="bi bi-bowl-hot"></i> Main Dish</button>
-                                <button class="cat-item" onclick="selectCat(this,'Drinks','bi-cup-straw')"><i class="bi bi-cup-straw"></i> Drinks</button>
-                                <button class="cat-item" onclick="selectCat(this,'Dessert','bi-cake2')"><i class="bi bi-cake2"></i> Dessert</button>
-                                <button class="cat-item" onclick="selectCat(this,'Snacks','bi-bag-heart')"><i class="bi bi-bag-heart"></i> Snacks</button>
-                                <button class="cat-item" onclick="selectCat(this,'Soup','bi-droplet-half')"><i class="bi bi-droplet-half"></i> Soup</button>
-                                <button class="cat-item" onclick="selectCat(this,'Other','bi-star')"><i class="bi bi-star"></i> Other</button>
-                            </div>
-                            <button class="btn w-100 text-white fw-bold" style="background:var(--primary-green);border-radius:12px;padding:10px;" onclick="goStep(2)">Next <i class="bi bi-arrow-right"></i></button>
-                        </div>
-
-                        <!-- ── STEP 2: Basic Info + Ingredients ── -->
-                        <div class="step" id="step2">
-                            <div class="mb-3">
-                                <label class="form-label-sm">Recipe Name <span class="text-danger">*</span></label>
-                                <input type="text" id="recipeName" class="form-control" placeholder="e.g. Mee Goreng Mamak" style="border-radius:12px;">
-                            </div>
-                            <div class="mb-3">
-                                <label class="form-label-sm">About This <span class="text-muted">(optional)</span></label>
-                                <textarea id="recipeDesc" class="form-control" rows="2" placeholder="What makes this recipe special?" style="border-radius:12px;resize:none;"></textarea>
-                            </div>
-
-                            <label class="form-label-sm">Ingredients <span class="text-danger">*</span></label>
-                            <div id="ingredientsList"></div>
-                            <button class="add-row-btn" onclick="addIngredient()"><i class="bi bi-plus"></i> Add Ingredient</button>
-
-                            <label class="form-label-sm mt-2">Cooking Time <span class="text-danger">*</span></label>
-                            <div class="time-pills" id="timePills">
-                                <button class="time-pill" onclick="selectTime(this,'< 15 min')">⚡ &lt;15 min</button>
-                                <button class="time-pill" onclick="selectTime(this,'15–30 min')">🕒 15–30 min</button>
-                                <button class="time-pill" onclick="selectTime(this,'30–60 min')">🍳 30–60 min</button>
-                                <button class="time-pill" onclick="selectTime(this,'1–2 hours')">⏳ 1–2 hours</button>
-                                <button class="time-pill" onclick="selectTime(this,'2+ hours')">🫕 2+ hours</button>
-                            </div>
-
-                            <div class="d-flex gap-2 mt-1">
-                                <button class="btn btn-outline-secondary fw-semibold flex-fill" style="border-radius:12px;" onclick="goStep(1)"><i class="bi bi-arrow-left"></i> Back</button>
-                                <button class="btn text-white fw-bold flex-fill" style="background:var(--primary-green);border-radius:12px;" onclick="goStep(3)">Next <i class="bi bi-arrow-right"></i></button>
-                            </div>
-                        </div>
-
-                        <!-- ── STEP 3: Cooking Steps ── -->
-                        <div class="step" id="step3">
-                            <label class="form-label-sm mb-2">Preparation <span class="text-danger">*</span></label>
-                            <div id="stepsList"></div>
-                            <button class="add-row-btn" onclick="addCookingStep()"><i class="bi bi-plus"></i> Add Step</button>
-
-                            <div class="d-flex gap-2 mt-2">
-                                <button class="btn btn-outline-secondary fw-semibold flex-fill" style="border-radius:12px;" onclick="goStep(2)"><i class="bi bi-arrow-left"></i> Back</button>
-                                <button class="btn text-white fw-bold flex-fill" style="background:var(--primary-orange);border-radius:12px;" onclick="saveRecipe()"><i class="bi bi-check-lg"></i> Save Recipe</button>
-                            </div>
-                        </div>
-
                     </div>
-                </div>
+                </a>
+            </div>
+        <?php endforeach; ?>
+    </div>
+
+    <!-- SAVED FAVORITES SECTION -->
+    <div class="section-header mt-5">Saved Favorites</div>
+    <div class="recipe-grid">
+        <?php if (empty($saved_recipes)): ?>
+            <p class="text-muted ps-3">No saved recipes yet. Explore and save some!</p>
+        <?php endif; ?>
+
+        <?php foreach ($saved_recipes as $recipe): 
+            $grad = $gradients[$recipe['cuisine']] ?? 'linear-gradient(135deg, #2E7D32, #9FA825)';
+            $icon = $icons[$recipe['meal_type']] ?? 'bi-egg-fried';
+            $savedActive = 'active'; 
+        ?>
+            <div class="recipe-card">
+                <button class="btn-save-recipe <?= $savedActive ?>" onclick="toggleSave(event, <?= $recipe['recipe_id'] ?>)">
+                    <i class="bi bi-heart"></i>
+                </button>
+
+                <a href="recipedetail.php?id=<?= $recipe['recipe_id'] ?>" class="text-decoration-none" style="color:inherit;">
+                    <div class="recipe-img" style="background: <?= $grad ?>;">
+                        <?php $imgSrc = getImageSrc($recipe['image'], '../../assets/images/recipes/'); ?>
+                        <?php if ($imgSrc): ?>
+                            <img src="<?= htmlspecialchars($imgSrc) ?>" alt="">
+                        <?php else: ?>
+                            <i class="bi <?= $icon ?>"></i>
+                        <?php endif; ?>
+                        <span class="badge-cuisine"><?= htmlspecialchars($recipe['cuisine']) ?></span>
+                    </div>
+                    <div class="recipe-info">
+                        <div class="recipe-title"><?= htmlspecialchars($recipe['title']) ?></div>
+                        <div class="recipe-desc"><?= htmlspecialchars($recipe['description']) ?></div>
+                        <div class="recipe-footer">
+                            <span class="recipe-tag"><?= htmlspecialchars($recipe['meal_type']) ?></span>
+                            <span class="recipe-time"><i class="bi bi-clock"></i> <?= htmlspecialchars($recipe['cooking_time'] ?? '15m') ?></span>
+                        </div>
+                    </div>
+                </a>
+            </div>
+        <?php endforeach; ?>
+    </div>
+</div>
+
+<!-- CREATE RECIPE MODAL -->
+<div class="modal fade" id="createRecipeModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h4 class="fw-bold" style="font-family:'Playfair Display', serif;">Share Your Recipe</h4>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <form action="cookbook.php" method="POST" enctype="multipart/form-data">
+                    <div class="row g-3">
+                        <div class="col-md-12">
+                            <label class="form-label fw-bold">Recipe Title</label>
+                            <input type="text" name="title" class="form-control" placeholder="e.g. Nasi Lemak Sambal Sotong" required>
+                        </div>
+                        <div class="col-md-12">
+                            <label class="form-label fw-bold">Short Description</label>
+                            <textarea name="description" class="form-control" rows="1" placeholder="Briefly describe your dish..."></textarea>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label fw-bold">Cuisine</label>
+                            <select name="cuisine" class="form-select" required>
+                                <option value="Melayu">Melayu</option>
+                                <option value="Asian">Asian</option>
+                                <option value="Western">Western</option>
+                            </select>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label fw-bold">Meal Type</label>
+                            <select name="meal_type" class="form-select" required>
+                                <option value="Breakfast">Breakfast</option>
+                                <option value="Lunch">Lunch</option>
+                                <option value="Dinner">Dinner</option>
+                                <option value="Dessert">Dessert</option>
+                                <option value="Snack">Snack</option>
+                                <option value="Drinks">Drinks</option>
+                            </select>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label fw-bold">Cooking Time (Mins)</label>
+                            <input type="number" name="cooking_time" class="form-control" placeholder="30" required>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label fw-bold">Recipe Image</label>
+                            <input type="file" name="recipe_image" class="form-control" accept="image/*">
+                        </div>
+                        <div class="col-12">
+                            <label class="form-label fw-bold">Ingredients</label>
+                            <textarea name="ingredients" class="form-control" rows="2" placeholder="List items separated by commas or lines..." required></textarea>
+                        </div>
+                        <div class="col-12">
+                            <label class="form-label fw-bold">Instructions</label>
+                            <textarea name="instructions" class="form-control" rows="3" placeholder="Step 1: Prep... Step 2: Cook... separated by lines" required></textarea>
+                        </div>
+                        <div class="col-12 text-end mt-4">
+                            <button type="button" class="btn btn-light rounded-pill px-4 me-2" data-bs-dismiss="modal">Cancel</button>
+                            <button type="submit" name="submit_recipe" class="btn btn-success rounded-pill px-5 fw-bold">Create Now</button>
+                        </div>
+                    </div>
+                </form>
             </div>
         </div>
+    </div>
+</div>
 
-        <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
-        <script>
-            // ── Sidebar ───────────────────────────────────────────────
-            const menuToggle = document.getElementById('menuToggle');
-            const sidebar    = document.getElementById('sidebar');
-            if (menuToggle) menuToggle.addEventListener('click', () => sidebar.classList.toggle('open'));
-
-            // ── Helper ────────────────────────────────────────────────
-            function escapeHtml(text) {
-                const d = document.createElement('div');
-                d.textContent = text;
-                return d.innerHTML;
-            }
-
-            // ── MY RECIPES ────────────────────────────────────────────
-            const DEFAULT_MY_RECIPES = [
-                { name: 'My Special Fried Rice', icon: 'bi-egg-fried', date: 'Jan 15, 2025', cookTime: '15–30 min', ingredients: ['Rice','Egg','Soy sauce'], steps: ['Cook rice.','Fry egg.','Mix together.'] },
-                { name: 'Family Secret Rendang',  icon: 'bi-cup-straw', date: 'Feb 3, 2025',  cookTime: '2+ hours',   ingredients: ['Beef','Coconut milk','Rendang paste'], steps: ['Marinate beef.','Slow cook with paste and coconut milk until dry.'] }
-            ];
-
-            function getMyRecipes() {
-                const stored = localStorage.getItem('myRecipes');
-                if (!stored) {
-                    localStorage.setItem('myRecipes', JSON.stringify(DEFAULT_MY_RECIPES));
-                    return DEFAULT_MY_RECIPES;
-                }
-                return JSON.parse(stored);
-            }
-
-            function saveMyRecipes(recipes) {
-                localStorage.setItem('myRecipes', JSON.stringify(recipes));
-            }
-
-            function renderMyRecipes() {
-                const recipes = getMyRecipes();
-                const grid    = document.getElementById('myRecipesGrid');
-                const addBtn  = document.getElementById('addRecipeBtn');
-                grid.innerHTML = '';
-
-                recipes.forEach((recipe, index) => {
-                    const card = document.createElement('div');
-                    card.className = 'recipe-card';
-                    card.setAttribute('onclick',
-                        `window.location.href='recipeDetails.html?name=${encodeURIComponent(recipe.name)}&icon=${encodeURIComponent(recipe.icon)}'`
-                    );
-                    const timeTag  = recipe.cookTime  ? `<span class="meta-tag"><i class="bi bi-clock"></i> ${escapeHtml(recipe.cookTime)}</span>` : '';
-                    const ingCount = recipe.ingredients ? `<span class="meta-tag"><i class="bi bi-list-ul"></i> ${recipe.ingredients.length} ingredients</span>` : '';
-                    card.innerHTML = `
-                        <div class="delete-icon" onclick="event.stopPropagation(); deleteMyRecipe(${index})">
-                            <i class="bi bi-trash3"></i>
+<!-- EDIT RECIPE MODAL -->
+<div class="modal fade" id="editRecipeModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h4 class="fw-bold" style="font-family:'Playfair Display', serif;">Edit Recipe</h4>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <form action="cookbook.php" method="POST" enctype="multipart/form-data">
+                    <input type="hidden" name="cr_id" id="edit_cr_id">
+                    <div class="row g-3">
+                        <div class="col-12">
+                            <img id="edit_img_preview" src="" style="width:100%;height:180px;object-fit:cover;border-radius:12px;display:none;" class="mb-2">
+                            <label class="form-label fw-bold">Change Image <span class="text-muted fw-normal">(optional)</span></label>
+                            <input type="file" name="recipe_image" class="form-control" accept="image/*">
                         </div>
-                        <div class="recipe-img"><i class="bi ${escapeHtml(recipe.icon)}"></i></div>
-                        <div class="recipe-info">
-                            <div class="recipe-title">${escapeHtml(recipe.name)}</div>
-                            <div class="recipe-meta" style="gap:4px;flex-wrap:wrap;margin-top:6px;">
-                                ${timeTag}${ingCount}
-                            </div>
-                            <div class="recipe-meta mt-1"><span>Created: ${escapeHtml(recipe.date)}</span></div>
-                        </div>`;
-                    grid.appendChild(card);
-                });
-
-                grid.appendChild(addBtn);
-            }
-
-            function deleteMyRecipe(index) {
-                if (!confirm('Delete this recipe?')) return;
-                const recipes = getMyRecipes();
-                recipes.splice(index, 1);
-                saveMyRecipes(recipes);
-                renderMyRecipes();
-            }
-
-            // ── SAVED RECIPES ─────────────────────────────────────────
-            function loadSavedRecipes() {
-                const savedRecipes = JSON.parse(localStorage.getItem('savedRecipes') || '[]');
-                const savedGrid    = document.getElementById('savedRecipesGrid');
-                if (!savedGrid) return;
-
-                if (savedRecipes.length === 0) {
-                    savedGrid.innerHTML = '<div class="empty-state"><i class="bi bi-bookmark"></i><p>No saved recipes yet. Save recipes from recipe details page!</p></div>';
-                    return;
-                }
-
-                savedGrid.innerHTML = savedRecipes.map((recipe, index) => `
-                    <div class="recipe-card" onclick="window.location.href='recipeDetails.html?name=${encodeURIComponent(recipe)}&icon=bi-journal-bookmark-fill'">
-                        <div class="delete-icon" onclick="event.stopPropagation(); removeSavedRecipe(${index})">
-                            <i class="bi bi-bookmark-x"></i>
+                        <div class="col-md-12">
+                            <label class="form-label fw-bold">Recipe Title</label>
+                            <input type="text" name="title" id="edit_title" class="form-control" required>
                         </div>
-                        <div class="recipe-img"><i class="bi bi-journal-bookmark-fill"></i></div>
-                        <div class="recipe-info">
-                            <div class="recipe-title">${escapeHtml(recipe)}</div>
-                            <div class="recipe-meta"><span>Saved recipe</span></div>
+                        <div class="col-md-12">
+                            <label class="form-label fw-bold">Short Description</label>
+                            <textarea name="description" id="edit_description" class="form-control" rows="1"></textarea>
                         </div>
-                    </div>`).join('');
+                        <div class="col-md-6">
+                            <label class="form-label fw-bold">Cuisine</label>
+                            <select name="cuisine" id="edit_cuisine" class="form-select" required>
+                                <option value="Melayu">Melayu</option>
+                                <option value="Asian">Asian</option>
+                                <option value="Western">Western</option>
+                            </select>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label fw-bold">Meal Type</label>
+                            <select name="meal_type" id="edit_meal_type" class="form-select" required>
+                                <option value="Breakfast">Breakfast</option>
+                                <option value="Lunch">Lunch</option>
+                                <option value="Dinner">Dinner</option>
+                                <option value="Dessert">Dessert</option>
+                                <option value="Snack">Snack</option>
+                                <option value="Drinks">Drinks</option>
+                            </select>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label fw-bold">Cooking Time (Mins)</label>
+                            <input type="number" name="cooking_time" id="edit_cooking_time" class="form-control" required>
+                        </div>
+                        <div class="col-12">
+                            <label class="form-label fw-bold">Ingredients</label>
+                            <textarea name="ingredients" id="edit_ingredients" class="form-control" rows="2" required></textarea>
+                        </div>
+                        <div class="col-12">
+                            <label class="form-label fw-bold">Instructions</label>
+                            <textarea name="instructions" id="edit_instructions" class="form-control" rows="3" required></textarea>
+                        </div>
+                        <div class="col-12 text-end mt-4">
+                            <button type="button" class="btn btn-light rounded-pill px-4 me-2" data-bs-dismiss="modal">Cancel</button>
+                            <button type="submit" name="update_recipe" class="btn btn-success rounded-pill px-5 fw-bold">
+                                <i class="bi bi-check-lg"></i> Save Changes
+                            </button>
+                        </div>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Custom Delete Confirm Popup -->
+<div class="confirm-overlay" id="confirmOverlay">
+    <div class="confirm-box">
+        <div class="confirm-icon">
+            <i class="bi bi-trash-fill"></i>
+        </div>
+        <div class="confirm-title">Delete Recipe?</div>
+        <div class="confirm-msg">This action cannot be undone. Your recipe will be permanently removed.</div>
+        <div class="confirm-actions">
+            <button class="btn-confirm-cancel" onclick="closeConfirm()">Cancel</button>
+            <button class="btn-confirm-delete" onclick="submitDelete()">Yes, Delete</button>
+        </div>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+<script>
+    async function toggleSave(event, recipeId) {
+        event.preventDefault(); 
+        event.stopPropagation();
+        const btn = event.currentTarget;
+        try {
+            const formData = new FormData();
+            formData.append('recipe_id', recipeId);
+            const response = await fetch('toggle_save.php', { method: 'POST', body: formData });
+            const data = await response.json();
+            if (data.status === 'removed') {
+                btn.closest('.recipe-card').parentElement.remove();
             }
+        } catch (error) {
+            console.error('Error:', error);
+        }
+    }
 
-            function removeSavedRecipe(index) {
-                if (!confirm('Remove this saved recipe?')) return;
-                let saved = JSON.parse(localStorage.getItem('savedRecipes') || '[]');
-                saved.splice(index, 1);
-                localStorage.setItem('savedRecipes', JSON.stringify(saved));
-                loadSavedRecipes();
+    function openEditModal(recipe) {
+        document.getElementById('edit_cr_id').value        = recipe.cr_id;
+        document.getElementById('edit_title').value        = recipe.title;
+        document.getElementById('edit_description').value  = recipe.description ?? '';
+        document.getElementById('edit_cuisine').value      = recipe.cuisine;
+        document.getElementById('edit_meal_type').value    = recipe.meal_type;
+        document.getElementById('edit_cooking_time').value = recipe.cooking_time;
+        document.getElementById('edit_ingredients').value  = recipe.ingredients;
+        document.getElementById('edit_instructions').value = recipe.instructions;
+
+        const preview = document.getElementById('edit_img_preview');
+        if (recipe.image) {
+            preview.src = recipe.image.startsWith('http')
+                ? recipe.image
+                : '../../assets/images/recipes/' + recipe.image;
+            preview.style.display = 'block';
+        } else {
+            preview.style.display = 'none';
+        }
+        new bootstrap.Modal(document.getElementById('editRecipeModal')).show();
+    }
+
+    let pendingDeleteId = null;
+
+    function confirmDelete(crId) {
+        pendingDeleteId = crId;
+        document.getElementById('confirmOverlay').classList.add('show');
+    }
+
+    function closeConfirm() {
+        document.getElementById('confirmOverlay').classList.remove('show');
+        pendingDeleteId = null;
+    }
+
+    function submitDelete() {
+        if (!pendingDeleteId) return;
+
+        const formData = new FormData();
+        formData.append('cr_id', pendingDeleteId);
+        formData.append('delete_recipe', '1');
+
+        fetch('cookbook.php', {
+            method: 'POST',
+            body: formData
+        })
+        .then(res => {
+            if (res.ok) {
+                window.location.href = 'cookbook.php?deleted=1';
             }
+        })
+        .catch(err => console.error(err));
+    }
 
-            // ── CART BADGE ────────────────────────────────────────────
-            function updateCartBadge() {
-                const cart  = JSON.parse(localStorage.getItem('cart') || '[]');
-                const badge = document.getElementById('cartBadge');
-                if (badge) {
-                    badge.textContent   = cart.length;
-                    badge.style.display = cart.length > 0 ? 'flex' : 'none';
-                }
-            }
+    document.getElementById('confirmOverlay').addEventListener('click', function(e) {
+        if (e.target === this) closeConfirm();
+    });
 
-            // ══════════════════════════════════════════════════════════
-            //   MODAL STATE
-            // ══════════════════════════════════════════════════════════
-            let selectedCat  = '';
-            let selectedIcon = 'bi-journal-bookmark-fill';
-            let selectedTime = '';
-            let addModal;
-            let currentStep  = 1;
-
-            function openAddModal() {
-                // Reset state
-                selectedCat  = '';
-                selectedIcon = 'bi-journal-bookmark-fill';
-                selectedTime = '';
-                currentStep  = 1;
-
-                document.querySelectorAll('.cat-item').forEach(e => e.classList.remove('selected'));
-                document.querySelectorAll('.time-pill').forEach(e => e.classList.remove('selected'));
-                document.getElementById('recipeName').value = '';
-                document.getElementById('recipeDesc').value = '';
-
-                // Reset ingredient rows
-                const ingList = document.getElementById('ingredientsList');
-                ingList.innerHTML = '';
-                addIngredient(); // start with one row
-
-                // Reset step rows
-                const stpList = document.getElementById('stepsList');
-                stpList.innerHTML = '';
-                addCookingStep(); // start with one row
-
-                showStep(1);
-                addModal = new bootstrap.Modal(document.getElementById('addRecipeModal'));
-                addModal.show();
-            }
-
-            // ── Navigate between steps ────────────────────────────────
-            function goStep(n) {
-                if (n > currentStep) {
-                    // Validate before advancing
-                    if (currentStep === 1) {
-                        if (!selectedCat) { alert('Please choose a category first.'); return; }
-                    }
-                    if (currentStep === 2) {
-                        const name = document.getElementById('recipeName').value.trim();
-                        if (!name) { alert('Please enter a recipe name.'); return; }
-                        const ings = getIngredients();
-                        if (ings.length === 0 || ings.every(i => !i.trim())) { alert('Please add at least one ingredient.'); return; }
-                        if (!selectedTime) { alert('Please select a cooking time.'); return; }
-                    }
-                }
-                currentStep = n;
-                showStep(n);
-            }
-
-            function showStep(n) {
-                [1,2,3].forEach(i => {
-                    document.getElementById(`step${i}`).classList.toggle('active', i === n);
-                    const dot = document.getElementById(`dot${i}`);
-                    dot.classList.remove('active','done');
-                    if (i === n)      dot.classList.add('active');
-                    if (i < n)        dot.classList.add('done');
-                });
-                if (document.getElementById('line12')) document.getElementById('line12').classList.toggle('done', n > 1);
-                if (document.getElementById('line23')) document.getElementById('line23').classList.toggle('done', n > 2);
-            }
-
-            // ── Category ──────────────────────────────────────────────
-            function selectCat(el, cat, icon) {
-                document.querySelectorAll('.cat-item').forEach(e => e.classList.remove('selected'));
-                el.classList.add('selected');
-                selectedCat  = cat;
-                selectedIcon = icon;
-            }
-
-            // ── Cooking time ──────────────────────────────────────────
-            function selectTime(el, time) {
-                document.querySelectorAll('.time-pill').forEach(e => e.classList.remove('selected'));
-                el.classList.add('selected');
-                selectedTime = time;
-            }
-
-            // ── Ingredient rows ───────────────────────────────────────
-            function addIngredient(value = '') {
-                const list = document.getElementById('ingredientsList');
-                const row  = document.createElement('div');
-                row.className = 'ingredient-row';
-                row.innerHTML = `
-                    <input type="text" placeholder="e.g. 2 cups rice" value="${escapeHtml(value)}">
-                    <button class="remove-btn" onclick="removeRow(this)" title="Remove"><i class="bi bi-x-circle"></i></button>`;
-                list.appendChild(row);
-            }
-
-            function getIngredients() {
-                return [...document.querySelectorAll('#ingredientsList input')].map(i => i.value.trim()).filter(Boolean);
-            }
-
-            // ── Cooking step rows ─────────────────────────────────────
-            let stepCounter = 0;
-            function addCookingStep(value = '') {
-                stepCounter++;
-                const list = document.getElementById('stepsList');
-                const row  = document.createElement('div');
-                row.className = 'step-row';
-                row.innerHTML = `
-                    <span style="font-size:13px;font-weight:700;color:var(--primary-green);min-width:22px;">${stepCounter}.</span>
-                    <textarea rows="2" placeholder="Describe this step...">${escapeHtml(value)}</textarea>
-                    <button class="remove-btn" onclick="removeRow(this); renumberSteps();" title="Remove"><i class="bi bi-x-circle"></i></button>`;
-                list.appendChild(row);
-            }
-
-            function renumberSteps() {
-                document.querySelectorAll('#stepsList .step-row span').forEach((span, i) => {
-                    span.textContent = `${i + 1}.`;
-                });
-                stepCounter = document.querySelectorAll('#stepsList .step-row').length;
-            }
-
-            function getCookingSteps() {
-                return [...document.querySelectorAll('#stepsList textarea')].map(t => t.value.trim()).filter(Boolean);
-            }
-
-            function removeRow(btn) {
-                btn.closest('.ingredient-row, .step-row').remove();
-            }
-
-            // ── Save ──────────────────────────────────────────────────
-            function saveRecipe() {
-                const steps = getCookingSteps();
-                if (steps.length === 0) { alert('Please add at least one cooking step.'); return; }
-
-                const today  = new Date();
-                const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
-                const dateStr = `${months[today.getMonth()]} ${today.getDate()}, ${today.getFullYear()}`;
-
-                const name = document.getElementById('recipeName').value.trim();
-                const desc = document.getElementById('recipeDesc').value.trim();
-
-                const recipes = getMyRecipes();
-                recipes.push({
-                    name,
-                    description: desc,
-                    icon: selectedIcon,
-                    category: selectedCat,
-                    cookTime: selectedTime,
-                    ingredients: getIngredients(),
-                    steps,
-                    date: dateStr
-                });
-                saveMyRecipes(recipes);
-                renderMyRecipes();
-                addModal.hide();
-            }
-
-            // ── INIT ──────────────────────────────────────────────────
-            renderMyRecipes();
-            loadSavedRecipes();
-            updateCartBadge();
-
-            window.addEventListener('storage', e => {
-                if (e.key === 'cart')         updateCartBadge();
-                if (e.key === 'savedRecipes') loadSavedRecipes();
-                if (e.key === 'myRecipes')    renderMyRecipes();
-            });
-        </script>
-    </body>
+    // Auto hide alerts after 3 seconds
+    document.querySelectorAll('.alert').forEach(function(alert) {
+        setTimeout(function() {
+            alert.style.transition = 'opacity 0.5s';
+            alert.style.opacity = '0';
+            setTimeout(function() { alert.remove(); }, 500);
+        }, 3000);
+    });
+</script>
+</body>
 </html>

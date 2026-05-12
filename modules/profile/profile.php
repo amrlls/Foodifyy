@@ -1,6 +1,7 @@
 <?php
 session_start();
 require_once __DIR__ . '/../../config/database.php';
+require_once __DIR__ . '/../../config/upload_helper.php';
 
 // Check login
 if (!isset($_SESSION['user_id'])) {
@@ -19,40 +20,43 @@ $user = $stmt->get_result()->fetch_assoc();
 
 $username = $user['username'] ?? 'Guest';
 
-// 2. Logic: Update Profile (Fixed Address Saving)
+// 2. Logic: Update Profile
 if (isset($_POST['update_profile'])) {
-    $fullname = $_POST['fullname'];
-    $email    = $_POST['email'];
-    $phone    = $_POST['phone'];
-    $address  = $_POST['address']; 
-    $profile_img = $user['profile_image']; 
+    $fullname    = $_POST['fullname'];
+    $email       = $_POST['email'];
+    $phone       = $_POST['phone'];
+    $address     = $_POST['address']; 
+    $profile_img = $user['profile_image'];
 
-    // Handle Profile Picture Upload
-    // Handle Profile Picture Upload
+    // Handle Profile Picture Upload via Cloudinary
     if (isset($_FILES['profile_pic']) && $_FILES['profile_pic']['error'] == 0) {
-        $target_dir = "../../assets/images/profiles/";
-        if (!file_exists($target_dir)) { mkdir($target_dir, 0777, true); }
-        
-        $file_ext = pathinfo($_FILES["profile_pic"]["name"], PATHINFO_EXTENSION);
-        $new_filename = "user_" . $userId . "_" . time() . "." . $file_ext;
+        $new_image_url = uploadToCloudinary($_FILES['profile_pic']['tmp_name'], 'foodify/profiles');
+        $conn->ping(); // reconnect DB selepas Cloudinary upload
 
-        if (move_uploaded_file($_FILES["profile_pic"]["tmp_name"], $target_dir . $new_filename)) {
-            
-            // ─── LOGIK PADAM GAMBAR LAMA (TAMBAHAN) ───
-            // Cek kalau user ada gambar lama dalam DB dan fail tu wujud kat server
+        if ($new_image_url) {
+            // Delete gambar lama dari Cloudinary
             if (!empty($user['profile_image'])) {
-                $old_image_path = $target_dir . $user['profile_image'];
-                if (file_exists($old_image_path)) {
-                    unlink($old_image_path); // Padam fail lama
-                }
+                deleteFromCloudinary($user['profile_image']);
             }
-            // ─────────────────────────────────────────
-
-            $profile_img = $new_filename;
+            $profile_img = $new_image_url;
+        } else {
+            // Fallback local kalau Cloudinary gagal
+            $target_dir = "../../assets/images/profiles/";
+            if (!file_exists($target_dir)) { mkdir($target_dir, 0777, true); }
+            $file_ext = pathinfo($_FILES["profile_pic"]["name"], PATHINFO_EXTENSION);
+            $new_filename = "user_" . $userId . "_" . time() . "." . $file_ext;
+            if (move_uploaded_file($_FILES["profile_pic"]["tmp_name"], $target_dir . $new_filename)) {
+                // Delete lama local
+                if (!empty($user['profile_image']) && !str_starts_with($user['profile_image'], 'http')) {
+                    $old_path = $target_dir . $user['profile_image'];
+                    if (file_exists($old_path)) unlink($old_path);
+                }
+                $profile_img = $new_filename;
+            }
         }
     }
 
-    // UPDATE DATABASE (Strictly include address)
+    // UPDATE DATABASE
     $update = $conn->prepare("UPDATE users SET username = ?, email = ?, phone = ?, address = ?, profile_image = ? WHERE user_id = ?");
     $update->bind_param("sssssi", $fullname, $email, $phone, $address, $profile_img, $userId);
     
@@ -64,13 +68,12 @@ if (isset($_POST['update_profile'])) {
     }
 }
 
-// 3. Logic: Update Password with Current Password Check
+// 3. Logic: Update Password
 if (isset($_POST['update_password'])) {
     $current_pwd = $_POST['current_password'];
     $new_pwd     = $_POST['new_password'];
     $confirm_pwd = $_POST['confirm_password'];
 
-    // Verification against DB password
     if (password_verify($current_pwd, $user['password'])) {
         if ($new_pwd === $confirm_pwd) {
             if (strlen($new_pwd) >= 6) {
@@ -87,10 +90,12 @@ if (isset($_POST['update_password'])) {
             $status = "password_mismatch";
         }
     } else {
-        // Status for incorrect old password
         $status = "current_pwd_wrong";
     }
 }
+
+// Get profile image src
+$profileSrc = getImageSrc($user['profile_image'], '../../assets/images/profiles/');
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -113,7 +118,7 @@ if (isset($_POST['update_password'])) {
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body { font-family: 'Nunito', sans-serif; background: #F7F9F7; color: var(--dark); }
 
-        /* ── SIDEBAR (LOCKED DESIGN) ── */
+        /* ── SIDEBAR ── */
         .sidebar {
             position: fixed; left: 0; top: 0; width: var(--sidebar-w); height: 100vh;
             background: white; box-shadow: 2px 0 16px rgba(0,0,0,0.06);
@@ -166,7 +171,7 @@ if (isset($_POST['update_password'])) {
 </head>
 <body>
 
-<div class="sidebar" id="sidebar">
+<div class="sidebar">
     <div class="sidebar-logo">
         <img src="../../assets/images/logo.png" alt="Foodify">
         <div class="logo-text">
@@ -186,8 +191,8 @@ if (isset($_POST['update_password'])) {
     <div class="sidebar-bottom">
         <a href="profile.php" class="text-decoration-none" style="color: inherit;">
             <div class="user-row" style="background-color: #DDEEE6; border: 1.5px solid var(--green);">
-                <?php if (!empty($user['profile_image'])): ?>
-                    <img src="../../assets/images/profiles/<?= htmlspecialchars($user['profile_image']) ?>" class="user-avatar-img">
+                <?php if ($profileSrc): ?>
+                    <img src="<?= htmlspecialchars($profileSrc) ?>" class="user-avatar-img">
                 <?php else: ?>
                     <i class="bi bi-person-circle"></i>
                 <?php endif; ?>
@@ -213,14 +218,13 @@ if (isset($_POST['update_password'])) {
                 <h5 class="fw-bold mb-4"><i class="bi bi-person-gear me-2 text-success"></i>Account Information</h5>
                 
                 <div class="mb-4 text-center">
-                    <?php if (!empty($user['profile_image'])): ?>
-                        <img src="../../assets/images/profiles/<?= htmlspecialchars($user['profile_image']) ?>" class="profile-display-img">
+                    <?php if ($profileSrc): ?>
+                        <img src="<?= htmlspecialchars($profileSrc) ?>" class="profile-display-img">
                     <?php else: ?>
                         <div class="mb-3"><i class="bi bi-person-circle" style="font-size: 80px; color: var(--green);"></i></div>
                     <?php endif; ?>
                 </div>
 
-                <!-- Added ID to form for SweetAlert targeting -->
                 <form id="profileForm" method="POST" enctype="multipart/form-data">
                     <div class="mb-3">
                         <label class="form-label">Update Profile Picture</label>
@@ -235,16 +239,14 @@ if (isset($_POST['update_password'])) {
                         <input type="email" name="email" class="form-control" value="<?= htmlspecialchars($user['email']) ?>" required>
                     </div>
                     <div class="mb-3">
-                        <label class="bi bi-phone me-1"></i><label class="form-label">Phone Number</label>
+                        <label class="form-label">Phone Number</label>
                         <input type="text" name="phone" class="form-control" value="<?= htmlspecialchars($user['phone'] ?? '') ?>">
                     </div>
                     <div class="mb-4">
                         <label class="form-label">Default Delivery Address</label>
                         <textarea name="address" class="form-control" rows="3"><?= htmlspecialchars($user['address'] ?? '') ?></textarea>
                     </div>
-                    <!-- Changed to type="button" to trigger SweetAlert -->
                     <button type="button" onclick="confirmUpdate()" class="btn-primary-foodify w-100">Update Profile</button>
-                    <!-- Hidden submit button to be triggered by JS -->
                     <input type="hidden" name="update_profile" value="1">
                 </form>
             </div>
@@ -276,7 +278,6 @@ if (isset($_POST['update_password'])) {
 
 <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 <script>
-    // Confirmation before updating profile
     function confirmUpdate() {
         Swal.fire({
             title: 'Are you sure?',
@@ -293,8 +294,7 @@ if (isset($_POST['update_password'])) {
         });
     }
 
-    // Logic for Status Alerts
-    <?php if($status == "profile_success"): ?>
+    <?php if($status == "profile_success" || isset($_GET['status']) && $_GET['status'] == 'profile_success'): ?>
         Swal.fire({ icon: 'success', title: 'Success!', text: 'Your profile has been updated.', confirmButtonColor: '#FF8F00' });
     <?php elseif($status == "password_success"): ?>
         Swal.fire({ icon: 'success', title: 'Success!', text: 'Password has been changed.', confirmButtonColor: '#FF8F00' });

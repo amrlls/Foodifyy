@@ -2,6 +2,7 @@
 session_start();
 
 require_once __DIR__ . '/../../config/database.php';
+require_once __DIR__ . '/../../config/upload_helper.php';
 
 $isLoggedIn = isset($_SESSION['user_id']);
 $userId     = $_SESSION['user_id'] ?? 0;
@@ -22,15 +23,12 @@ if ($isLoggedIn) {
         $nav_role = $user_nav['role'];
     }
 }
-// ----------------------------
 
 // Get filters from URL
 $meal_type = $_GET['meal_type'] ?? 'all';
 $cuisine   = $_GET['cuisine']   ?? 'all';
 $search    = trim($_GET['search'] ?? '');
 
-// Build query 
-// Ditambah subquery: (SELECT COUNT(*) FROM saved_recipes...) as is_saved
 $where  = ["is_public = 1"];
 $params = [];
 $types  = '';
@@ -56,12 +54,10 @@ if ($search !== '') {
 
 $whereSQL = implode(' AND ', $where);
 
-// Query utama yang telah dikemaskini dengan status is_saved
 $sql = "SELECT r.*, 
         (SELECT COUNT(*) FROM saved_recipes s WHERE s.recipe_id = r.recipe_id AND s.user_id = ?) as is_saved 
         FROM recipes r WHERE $whereSQL ORDER BY created_at DESC";
 
-// Tambah userId sebagai parameter pertama untuk subquery
 $allParams = array_merge([$userId], $params);
 $allTypes  = 'i' . $types;
 
@@ -74,7 +70,6 @@ $result  = $stmt->get_result();
 $recipes = $result->fetch_all(MYSQLI_ASSOC);
 $count   = count($recipes);
 
-// Gradient colours per cuisine
 $gradients = [
     'Melayu'  => 'linear-gradient(135deg, #2E7D32, #9FA825)',
     'Western' => 'linear-gradient(135deg, #c0392b, #e74c3c)',
@@ -142,13 +137,7 @@ $icons = [
         }
         .user-row:hover { background-color: #DDEEE6 !important; transform: translateY(-3px); box-shadow: 0 4px 10px rgba(0,0,0,0.05); }
         .user-row i { font-size: 1.6rem; color: var(--green); }
-        .user-avatar-img { 
-            width: 35px; 
-            height: 35px; 
-            border-radius: 50%; 
-            object-fit: cover; 
-        }
-        
+        .user-avatar-img { width: 35px; height: 35px; border-radius: 50%; object-fit: cover; }
         .user-name { font-weight: 700; font-size: 0.88rem; }
         .user-role { font-size: 0.7rem; color: var(--muted); }
 
@@ -196,15 +185,9 @@ $icons = [
         .recipe-info { padding: 1.2rem; }
         .recipe-title { font-weight: 800; font-size: 1.1rem; margin-bottom: 0.4rem; color: var(--dark); }
         .recipe-desc {
-            font-size: 0.8rem;
-            color: var(--muted);
-            line-height: 1.5;
-            display: -webkit-box;
-            -webkit-line-clamp: 2;
-            line-clamp: 2;
-            -webkit-box-orient: vertical;
-            overflow: hidden;
-            margin-bottom: 0.8rem;
+            font-size: 0.8rem; color: var(--muted); line-height: 1.5;
+            display: -webkit-box; -webkit-line-clamp: 2; line-clamp: 2;
+            -webkit-box-orient: vertical; overflow: hidden; margin-bottom: 0.8rem;
         }
         .recipe-footer { display: flex; align-items: center; justify-content: space-between; }
         .recipe-tag { background: var(--green-light); color: var(--green); font-size: 0.7rem; font-weight: 800; padding: 3px 12px; border-radius: 50px; }
@@ -233,7 +216,7 @@ $icons = [
         <li><a href="recipes.php" class="active"><i class="bi bi-journal-bookmark-fill"></i> Recipes</a></li>
         <li><a href="../shop/index.php"><i class="bi bi-bag-fill"></i> Shop</a></li>
         <?php if ($isLoggedIn): ?>
-            <li><a href="collection.php"><i class="bi bi-bookmark-heart-fill"></i> My Cookbooks</a></li>
+            <li><a href="cookbook.php"><i class="bi bi-bookmark-heart-fill"></i> My Cookbooks</a></li>
             <li><a href="../order/index.php"><i class="bi bi-truck"></i> My Orders</a></li>
         <?php endif; ?>
     </ul>
@@ -241,17 +224,13 @@ $icons = [
     <div class="sidebar-bottom">
         <?php if ($isLoggedIn): ?>
             <a href="../profile/profile.php" class="text-decoration-none" style="color: inherit;">
-               <div class="user-row">
-                    <?php 
-                    // Kita kena undur 2 folder ke belakang untuk jumpa folder assets
-                    $imgPath = "../../assets/images/profiles/" . $nav_profile_img;
-                    
-                    if (!empty($nav_profile_img) && file_exists($imgPath)): ?>
-                        <img src="<?= $imgPath ?>" class="user-avatar-img">
+                <div class="user-row">
+                    <?php $navProfileSrc = getImageSrc($nav_profile_img, '../../assets/images/profiles/'); ?>
+                    <?php if ($navProfileSrc): ?>
+                        <img src="<?= htmlspecialchars($navProfileSrc) ?>" class="user-avatar-img">
                     <?php else: ?>
                         <i class="bi bi-person-circle"></i>
                     <?php endif; ?>
-                    
                     <div>
                         <div class="user-name"><?= htmlspecialchars($username) ?></div>
                         <div class="user-role"><?= htmlspecialchars($nav_role) ?></div>
@@ -320,8 +299,9 @@ $icons = [
 
                 <a href="recipedetail.php?id=<?= $recipe['recipe_id'] ?>" class="text-decoration-none" style="color:inherit;">
                     <div class="recipe-img" style="background: <?= $grad ?>;">
-                        <?php if ($recipe['image']): ?>
-                            <img src="../../assets/images/recipes/<?= htmlspecialchars($recipe['image']) ?>" alt="">
+                        <?php $imgSrc = getImageSrc($recipe['image'], '../../assets/images/recipes/'); ?>
+                        <?php if ($imgSrc): ?>
+                            <img src="<?= htmlspecialchars($imgSrc) ?>" alt="">
                         <?php else: ?>
                             <i class="bi <?= $icon ?>"></i>
                         <?php endif; ?>
@@ -360,7 +340,6 @@ $icons = [
             const formData = new FormData();
             formData.append('recipe_id', recipeId);
 
-            // AJAX ke toggle_save.php
             const response = await fetch('toggle_save.php', {
                 method: 'POST',
                 body: formData

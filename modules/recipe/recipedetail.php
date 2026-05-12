@@ -2,26 +2,50 @@
 session_start();
 
 require_once __DIR__ . '/../../config/database.php';
+require_once __DIR__ . '/../../config/upload_helper.php';
 
 $isLoggedIn = isset($_SESSION['user_id']);
 $userId     = $_SESSION['user_id'] ?? 0;
-$username   = $_SESSION['username'] ?? 'Guest';
+$username = $_SESSION['username'] ?? 'Guest';
+$nav_profile_img = '';
+$nav_role = 'Customer';
+
+if ($isLoggedIn) {
+    $stmt_nav = $conn->prepare("SELECT username, profile_image, role FROM users WHERE user_id = ?");
+    $stmt_nav->bind_param("i", $userId);
+    $stmt_nav->execute();
+    $user_nav = $stmt_nav->get_result()->fetch_assoc();
+    if ($user_nav) {
+        $username = $user_nav['username'];
+        $nav_profile_img = $user_nav['profile_image'];
+        $nav_role = $user_nav['role'];
+    }
+}
 
 // Ambil ID resipi dari URL
 $recipe_id = isset($_GET['id']) ? (int)$_GET['id'] : 0;
+$type = $_GET['type'] ?? '';
 
-// Query utama dengan subquery is_saved
-$sql = "SELECT r.*, 
-        (SELECT COUNT(*) FROM saved_recipes s WHERE s.recipe_id = r.recipe_id AND s.user_id = ?) as is_saved 
-        FROM recipes r WHERE r.recipe_id = ?";
-
-$stmt = $conn->prepare($sql);
-$stmt->bind_param("ii", $userId, $recipe_id);
-$stmt->execute();
-$recipe = $stmt->get_result()->fetch_assoc();
+if ($type === 'user') {
+    // Query dari created_recipes
+    $sql = "SELECT *, 0 as is_saved FROM created_recipes WHERE cr_id = ? AND user_id = ?";
+    $stmt = $conn->prepare($sql);
+    $stmt->bind_param("ii", $recipe_id, $userId);
+    $stmt->execute();
+    $recipe = $stmt->get_result()->fetch_assoc();
+} else {
+    // Query dari recipes (asal)
+    $sql = "SELECT r.*, 
+            (SELECT COUNT(*) FROM saved_recipes s WHERE s.recipe_id = r.recipe_id AND s.user_id = ?) as is_saved 
+            FROM recipes r WHERE r.recipe_id = ?";
+    $stmt = $conn->prepare($sql);
+    $stmt->bind_param("ii", $userId, $recipe_id);
+    $stmt->execute();
+    $recipe = $stmt->get_result()->fetch_assoc();
+}
 
 if (!$recipe) {
-    die("Resipi tidak dijumpai.");
+    die("No recipe found.");
 }
 
 $ingredients = explode("\n", $recipe['ingredients']);
@@ -84,13 +108,22 @@ $grad = $gradients[$recipe['cuisine']] ?? 'linear-gradient(135deg, #2E7D32, #9FA
             background: var(--green-light); border-radius: 12px; margin-bottom: 10px;
             cursor: pointer; transition: all 0.2s ease-out;
         }
+        .user-row:hover { background-color: #DDEEE6 !important; transform: translateY(-3px); box-shadow: 0 4px 10px rgba(0,0,0,0.05); }
         .user-row i { font-size: 1.6rem; color: var(--green); }
+        .user-avatar-img { 
+            width: 35px; 
+            height: 35px; 
+            border-radius: 50%; 
+            object-fit: cover; 
+        }
+        
         .user-name { font-weight: 700; font-size: 0.88rem; }
         .user-role { font-size: 0.7rem; color: var(--muted); }
 
         .btn-side { display: block; padding: 9px; border-radius: 50px; font-weight: 700; font-size: 0.85rem; text-align: center; text-decoration: none; margin-bottom: 6px; transition: 0.2s; }
         .btn-side-login { background: var(--orange); color: white; }
         .btn-side-logout { background: #FEE2E2; color: #DC2626; }
+        .btn-side-logout:hover { background: #DC2626; color: white; }
 
         /* ── MAIN CONTENT ── */
         .main-content { margin-left: var(--sidebar-w); padding: 2rem; min-height: 100vh; }
@@ -146,18 +179,27 @@ $grad = $gradients[$recipe['cuisine']] ?? 'linear-gradient(135deg, #2E7D32, #9FA
         <li><a href="recipes.php" class="active"><i class="bi bi-journal-bookmark-fill"></i> Recipes</a></li>
         <li><a href="../shop/index.php"><i class="bi bi-bag-fill"></i> Shop</a></li>
         <?php if ($isLoggedIn): ?>
-            <li><a href="collection.php"><i class="bi bi-bookmark-heart-fill"></i> My Cookbooks</a></li>
+            <li><a href="cookbook.php"><i class="bi bi-bookmark-heart-fill"></i> My Cookbooks</a></li>
             <li><a href="../order/index.php"><i class="bi bi-truck"></i> My Orders</a></li>
         <?php endif; ?>
     </ul>
     <div class="sidebar-bottom">
         <?php if ($isLoggedIn): ?>
             <a href="../profile/profile.php" class="text-decoration-none" style="color: inherit;">
-                <div class="user-row">
-                    <i class="bi bi-person-circle"></i>
+               <div class="user-row">
+                    <?php 
+                    // Kita kena undur 2 folder ke belakang untuk jumpa folder assets
+                    $imgPath = "../../assets/images/profiles/" . $nav_profile_img;
+                    
+                    if (!empty($nav_profile_img) && file_exists($imgPath)): ?>
+                        <img src="<?= $imgPath ?>" class="user-avatar-img">
+                    <?php else: ?>
+                        <i class="bi bi-person-circle"></i>
+                    <?php endif; ?>
+                    
                     <div>
                         <div class="user-name"><?= htmlspecialchars($username) ?></div>
-                        <div class="user-role"><?= htmlspecialchars($_SESSION['role'] ?? 'Customer') ?></div>
+                        <div class="user-role"><?= htmlspecialchars($nav_role) ?></div>
                     </div>
                 </div>
             </a>
@@ -176,15 +218,22 @@ $grad = $gradients[$recipe['cuisine']] ?? 'linear-gradient(135deg, #2E7D32, #9FA
 
     <div class="recipe-layout">
         <div class="recipe-card-main">
-            <button class="btn-save-recipe <?= ($recipe['is_saved'] > 0) ? 'active' : '' ?>" onclick="toggleSave(event, <?= $recipe['recipe_id'] ?>)">
-                <i class="bi bi-heart"></i>
-            </button>
+            <?php if ($type !== 'user'): ?>
+        <button class="btn-save-recipe <?= ($recipe['is_saved'] > 0) ? 'active' : '' ?>" 
+                onclick="toggleSave(event, <?= $recipe['recipe_id'] ?>)">
+            <i class="bi bi-heart"></i>
+        </button>
+<?php endif; ?>
             <div class="recipe-img-box" style="background: <?= $grad ?>;">
-                <?php if ($recipe['image']): ?>
-                    <img src="../../assets/images/recipes/<?= htmlspecialchars($recipe['image']) ?>">
-                <?php else: ?>
-                    <i class="bi bi-egg-fried" style="font-size: 5rem; color: white;"></i>
-                <?php endif; ?>
+                <?php 
+            $basePath = ($type === 'user') ? '../../assets/images/recipes/' : '../../assets/images/recipes/';
+            $imgSrc = getImageSrc($recipe['image'], $basePath); 
+            ?>
+            <?php if ($imgSrc): ?>
+                <img src="<?= htmlspecialchars($imgSrc) ?>">
+            <?php else: ?>
+                <i class="bi bi-egg-fried" style="font-size: 5rem; color: white;"></i>
+            <?php endif; ?>
             </div>
             <div class="p-4">
                 <h1 class="fw-bold"><?= htmlspecialchars($recipe['title']) ?></h1>
@@ -196,6 +245,21 @@ $grad = $gradients[$recipe['cuisine']] ?? 'linear-gradient(135deg, #2E7D32, #9FA
             </div>
         </div>
 
+        <?php if ($type === 'user'): ?>
+        <div class="video-container">
+            <div class="video-player" style="background: linear-gradient(135deg, #2E7D32, #9FA825);">
+                <div class="text-center text-white p-4">
+                    <i class="bi bi-person-video3" style="font-size: 4rem; opacity: 0.8;"></i>
+                    <h5 class="fw-bold mt-3">Your Recipe</h5>
+                    <p class="small opacity-75 mb-0">This is your personal creation</p>
+                </div>
+            </div>
+            <div class="p-3 text-center">
+                <h4 class="fw-bold">My Creation</h4>
+                <p class="text-muted small mb-0">Created by you on <?= date('d M Y', strtotime($recipe['created_at'])) ?></p>
+            </div>
+        </div>
+        <?php else: ?>
         <div class="video-container">
             <div class="video-player" onclick="alert('Video coming soon!')">
                 <i class="bi bi-play-circle-fill"></i>
@@ -205,6 +269,7 @@ $grad = $gradients[$recipe['cuisine']] ?? 'linear-gradient(135deg, #2E7D32, #9FA
                 <p class="text-muted small mb-0">Follow the step-by-step video guide</p>
             </div>
         </div>
+        <?php endif; ?>
     </div>
 
     <div class="row">
