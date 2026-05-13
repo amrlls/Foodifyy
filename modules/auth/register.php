@@ -116,7 +116,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             font-size: 2.8rem;
             background: var(--primary-grad);
             -webkit-background-clip: text;
+            background-clip: text;              /* tambah ni */
+
             -webkit-text-fill-color: transparent;
+            color: transparent;    
             margin-bottom: 0.2rem;
             letter-spacing: -1px;
         }
