@@ -168,7 +168,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['step']) && $_POST['st
             font-family: 'Playfair Display', serif; font-weight: 900;
             font-size: 2.8rem;
             background: var(--primary-grad);
-            -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+            -webkit-background-clip: text; background-clip: text;  
+      
+
+        -webkit-text-fill-color: transparent;
+        color: transparent;    
             text-align: center; margin-bottom: 0.2rem; letter-spacing: -1px;
         }
         h2 { font-weight: 800; font-size: 1.8rem; letter-spacing: -0.8px; color: #1a1a1a; }
