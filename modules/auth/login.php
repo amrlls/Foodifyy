@@ -19,7 +19,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         if ($stmt->num_rows === 0) {
             $error = 'Email not found.';
         } else {
-            $user_id       = '';
+            $user_id   = '';
             $username = '';
             $hashed   = '';
             $role     = '';
@@ -34,9 +34,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $_SESSION['role']     = $role;
 
                 // Redirect based on role
-                if ($role === 'admin') {
-                    header("Location: ../../admin/dashboard.php");
-                } elseif ($role === 'staff') {
+                if ($role === 'admin' || $role === 'staff') {
                     header("Location: ../../admin/dashboard.php");
                 } else {
                     header("Location: ../../index.php");
@@ -53,297 +51,270 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Login – Foodify</title>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
-    <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800;900&family=Playfair+Display:wght@700;800&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;700;800&family=Playfair+Display:wght@900&display=swap" rel="stylesheet">
     <style>
         :root {
-            --primary-green: #2D7A3A;
-            --primary-green-mid: #3E9B4E;
-            --primary-orange: #FF6B00;
-            --primary-orange-light: #FF8C38;
-            --primary-orange-pale: #FFF3E8;
-            --green-light: #EAF4EB;
-            --dark-text: #1A1A1A;
-            --mid-text: #4A4A4A;
-            --muted: #888;
-            --border: #E8E8E8;
+            --primary-grad: linear-gradient(135deg, #FF6B6B 0%, #FF8E53 100%);
+            --accent: #FF6B6B;
+            --bg-gradient: radial-gradient(at 0% 0%, rgba(255, 107, 107, 0.15) 0px, transparent 50%), 
+                           radial-gradient(at 100% 0%, rgba(255, 142, 83, 0.15) 0px, transparent 50%), 
+                           radial-gradient(at 100% 100%, rgba(255, 107, 107, 0.1) 0px, transparent 50%), 
+                           radial-gradient(at 0% 100%, rgba(255, 142, 83, 0.15) 0px, transparent 50%);
+            --soft-bg: #fdfdfd;
         }
-        * { margin: 0; padding: 0; box-sizing: border-box; }
+
         body {
-                font-family: 'Nunito', sans-serif;
-                background:
-                    radial-gradient(ellipse at 20% 50%, rgba(120, 198, 121, 0.25) 0%, transparent 60%),
-                    radial-gradient(ellipse at 80% 20%, rgba(255, 183, 77, 0.2) 0%, transparent 55%),
-                    radial-gradient(ellipse at 60% 80%, rgba(100, 181, 246, 0.15) 0%, transparent 50%),
-                    linear-gradient(135deg, #f0faf0 0%, #fffde7 50%, #e3f2fd 100%);
-                min-height: 100vh;
-                display: flex;
-                align-items: center;
-                justify-content: center;
-                padding: 20px;
-            }
+            font-family: 'Plus Jakarta Sans', sans-serif;
+            background-color: var(--soft-bg);
+            background-image: var(--bg-gradient);
+            background-attachment: fixed;
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+            margin: 0;
+            overflow-x: hidden;
+        }
+
+        /* Decorative background shapes */
+        .bg-shape {
+            position: absolute;
+            z-index: -1;
+            filter: blur(80px);
+            border-radius: 50%;
+            opacity: 0.6;
+        }
+
         .auth-card {
             width: 100%;
-            max-width: 500px;
-            background: white;
-            border-radius: 36px;
-            box-shadow: 0 25px 50px -12px rgba(0,0,0,0.2);
-            overflow: hidden;
-            transition: transform 0.3s ease;
+            max-width: 450px;
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            border-radius: 32px;
+            box-shadow: 0 25px 70px rgba(0,0,0,0.07);
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            transition: transform 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            animation: fadeIn 0.6s ease-out;
         }
-        .auth-card:hover { transform: translateY(-4px); }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
         .auth-header {
-            background: linear-gradient(135deg, var(--primary-green) 0%, #3E9B4E 60%, #9FA825 100%);
-            padding: 2.2rem 2rem 2rem;
+            padding: 3.5rem 2.5rem 1.5rem;
             text-align: center;
-            color: white;
-            position: relative;
-            overflow: hidden;
         }
-        .auth-header::before {
-            content: '';
-            position: absolute;
-            top: -40px; right: -40px;
-            width: 140px; height: 140px;
-            border-radius: 50%;
-            background: rgba(255,255,255,0.07);
-        }
-        .auth-header::after {
-            content: '';
-            position: absolute;
-            bottom: -30px; left: -30px;
-            width: 110px; height: 110px;
-            border-radius: 50%;
-            background: rgba(255,255,255,0.05);
-        }
-        .logo-wrap {
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            gap: 12px;
-            margin-bottom: 6px;
-            position: relative;
-            z-index: 1;
-        }
-        .logo-image {
-            width: 60px;
-            height: 60px;
-            object-fit: contain;
-            border-radius: 14px;
-            filter: drop-shadow(0 4px 8px rgba(0,0,0,0.2));
-        }
-        .logo-text { line-height: 1; text-align: left; }
-        .logo-text .brand {
-            font-family: 'Nunito', sans-serif;
-            font-size: 28px;
-            font-weight: 900;
-            letter-spacing: -0.5px;
-            color: white;
-        }
-        .logo-text .tagline {
-            font-size: 11px;
-            font-weight: 600;
-            opacity: 0.85;
-            letter-spacing: 0.3px;
-        }
-        .auth-body { padding: 2rem 2rem 2.5rem; }
-        .auth-body h2 {
+
+        .brand-name {
             font-family: 'Playfair Display', serif;
-            font-size: 26px;
-            font-weight: 800;
-            color: var(--dark-text);
-            margin-bottom: 4px;
+            font-weight: 900;
+            font-size: 2.8rem;
+            background: var(--primary-grad);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            margin-bottom: 0.2rem;
+            letter-spacing: -1px;
         }
-        .auth-body .subtitle {
-            color: var(--muted);
-            font-size: 14px;
-            margin-bottom: 28px;
-        }
+
+        .ls-wide { letter-spacing: 2px; font-size: 0.7rem !important; }
+
+        .auth-body { padding: 0 2.5rem 3.5rem; }
+
+        h2 { font-weight: 800; font-size: 1.8rem; letter-spacing: -0.8px; color: #1a1a1a; }
+        .subtitle { color: #8e8e93; font-size: 0.95rem; margin-bottom: 2rem; }
+
+        /* ── INPUTS ── */
         .input-group-custom {
             position: relative;
-            margin-bottom: 16px;
-            display: flex;
-            align-items: center;
+            margin-bottom: 1.2rem;
         }
-        .input-group-custom .input-left-icon {
+
+        .input-left-icon {
             position: absolute;
-            left: 16px;
-            color: #bbb;
-            font-size: 1.1rem;
-            z-index: 2;
-            pointer-events: none;
-            transition: color 0.2s;
+            left: 20px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: #A0A0A0;
+            transition: 0.3s;
+            z-index: 5;
         }
-        .input-group-custom:focus-within .input-left-icon { color: var(--primary-orange); }
+
         .input-group-custom input {
             width: 100%;
-            padding: 13px 46px 13px 44px;
-            border: 1.5px solid var(--border);
-            border-radius: 14px;
-            font-family: 'Nunito', sans-serif;
-            font-size: 0.95rem;
+            padding: 16px 20px 16px 52px;
+            background: #F8F9FA;
+            border: 2px solid #F1F3F5;
+            border-radius: 18px;
             font-weight: 600;
-            transition: all 0.2s;
-            background: #fafafa;
-            color: var(--dark-text);
-            box-sizing: border-box;
+            transition: all 0.3s ease;
+            color: #2d3436;
         }
+
         .input-group-custom input:focus {
             outline: none;
-            border-color: var(--primary-orange);
             background: white;
-            box-shadow: 0 0 0 4px rgba(255,107,0,0.08);
+            border-color: var(--accent);
+            box-shadow: 0 10px 25px rgba(255, 107, 107, 0.1);
         }
-        .eye-toggle {
 
+        .input-group-custom input::placeholder { color: #adb5bd; font-weight: 400; }
+
+        .input-group-custom:focus-within .input-left-icon { color: var(--accent); }
+
+        .eye-toggle {
             position: absolute;
-            right: 0;
-            top: 0; bottom: 0;
-            width: 44px;
+            right: 15px;
+            top: 50%;
+            transform: translateY(-50%);
             background: none;
             border: none;
-            color: #bbb;
+            color: #adb5bd;
+            padding: 8px;
             cursor: pointer;
-            font-size: 1rem;
-            z-index: 2;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            transition: color 0.2s;
-            border-radius: 0 14px 14px 0;
+            z-index: 5;
+            transition: 0.2s;
         }
-        .eye-toggle:hover { color: var(--primary-orange); }
-        .forgot-link {
-            text-align: right;
-            margin-top: -6px;
-            margin-bottom: 20px;
-        }
-        .forgot-link a {
-            color: var(--primary-green);
-            font-size: 13px;
-            font-weight: 700;
-            text-decoration: none;
-        }
-        .forgot-link a:hover { color: var(--primary-orange); }
+
+        .eye-toggle:hover { color: var(--accent); }
+
+        /* ── BUTTONS & LINKS ── */
         .btn-login {
-            background: var(--primary-orange);
-            border: none;
-            padding: 14px;
-            border-radius: 50px;
-            font-family: 'Nunito', sans-serif;
-            font-weight: 800;
-            font-size: 15px;
+            background: var(--primary-grad);
             color: white;
+            border: none;
             width: 100%;
-            transition: all 0.2s;
+            padding: 18px;
+            border-radius: 18px;
+            font-weight: 800;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-top: 1rem;
+            transition: all 0.4s;
+            box-shadow: 0 12px 24px rgba(255, 107, 107, 0.25);
             display: flex;
             align-items: center;
             justify-content: center;
-            gap: 8px;
-            letter-spacing: 0.3px;
+            gap: 10px;
         }
+
         .btn-login:hover {
-            background: var(--primary-orange-light);
-            transform: scale(1.02);
-            box-shadow: 0 8px 20px rgba(255,107,0,0.3);
+            transform: translateY(-3px);
+            box-shadow: 0 18px 30px rgba(255, 107, 107, 0.35);
+            filter: brightness(1.05);
         }
-        .btn-login:active { transform: scale(0.99); }
-        .register-link {
-            text-align: center;
-            margin-top: 20px;
-            color: var(--muted);
-            font-size: 14px;
-            font-weight: 600;
+
+        .btn-login:active { transform: translateY(-1px); }
+
+        .forgot-link { text-align: right; margin-bottom: 1.5rem; }
+        .forgot-link a { color: var(--accent); text-decoration: none; font-size: 0.88rem; font-weight: 700; transition: 0.2s; }
+        .forgot-link a:hover { opacity: 0.8; }
+
+        .register-link { text-align: center; margin-top: 2.2rem; font-size: 0.95rem; color: #636E72; }
+        .register-link a { 
+            color: #2D3436; 
+            font-weight: 800; 
+            text-decoration: none; 
+            position: relative;
+            padding-bottom: 2px;
         }
-        .register-link a {
-            color: var(--primary-orange);
-            text-decoration: none;
-            font-weight: 800;
+        .register-link a::after {
+            content: '';
+            position: absolute;
+            bottom: 0; left: 0;
+            width: 100%; height: 2px;
+            background: var(--primary-grad);
+            transform: scaleX(0.3);
+            transform-origin: left;
+            transition: 0.3s;
         }
-        .register-link a:hover { text-decoration: underline; }
+        .register-link a:hover::after { transform: scaleX(1); }
+
         .back-home {
             position: fixed;
-            top: 24px; left: 24px;
-            background: white;
-            padding: 8px 18px;
-            border-radius: 40px;
+            top: 40px; left: 40px;
+            color: #1A1C1E;
             text-decoration: none;
-            font-family: 'Nunito', sans-serif;
             font-weight: 700;
-            font-size: 13px;
-            color: var(--primary-green);
-            box-shadow: 0 2px 12px rgba(0,0,0,0.1);
-            transition: all 0.2s;
-            z-index: 100;
             display: flex;
             align-items: center;
-            gap: 6px;
+            gap: 10px;
+            transition: 0.3s;
+            z-index: 100;
         }
-        .back-home:hover {
-            background: var(--primary-green);
-            color: white;
-            transform: translateX(-3px);
-        }
-        .alert-custom {
-            padding: 12px 16px;
-            border-radius: 12px;
-            font-size: 13px;
-            font-weight: 700;
-            margin-bottom: 16px;
-        }
+        .back-home:hover { color: var(--accent); transform: translateX(-5px); }
+
         .alert-error {
-            background: #FEE2E2;
-            color: #DC2626;
-            border: 1px solid #FECACA;
+            background: #fff5f5;
+            color: #e03131;
+            border-radius: 16px;
+            padding: 16px;
+            font-size: 0.9rem;
+            font-weight: 600;
+            margin-bottom: 1.8rem;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            border: 1px solid rgba(224, 49, 49, 0.1);
+            animation: shake 0.4s ease-in-out;
         }
-        @media (max-width: 575px) {
-            .auth-card { border-radius: 28px; }
-            .auth-body { padding: 1.5rem; }
-            .back-home { top: 16px; left: 16px; font-size: 12px; padding: 6px 14px; }
+
+        @keyframes shake {
+            0%, 100% { transform: translateX(0); }
+            25% { transform: translateX(-5px); }
+            75% { transform: translateX(5px); }
+        }
+
+        @media (max-width: 576px) {
+            .back-home { top: 20px; left: 20px; font-size: 0.9rem; }
+            .auth-card { border-radius: 24px; }
+            .auth-header { padding-top: 3rem; }
+            .auth-body { padding: 0 1.8rem 3rem; }
         }
     </style>
 </head>
 <body>
 
+<!-- Floating shapes for aesthetic depth -->
+<div class="bg-shape" style="width: 300px; height: 300px; background: #FF6B6B; top: -100px; left: -100px;"></div>
+<div class="bg-shape" style="width: 250px; height: 250px; background: #FF8E53; bottom: -50px; right: -50px;"></div>
+
 <a href="../../index.php" class="back-home">
-    <i class="bi bi-arrow-left"></i>Back
+    <i class="bi bi-arrow-left-circle-fill fs-4"></i> <span>Back to Home</span>
 </a>
 
 <div class="auth-card">
     <div class="auth-header">
-        <div class="logo-wrap">
-    <img src="../../assets/images/logo.png" alt="Foodify Logo" class="logo-image">
-    <div class="logo-text">
-        <div class="brand">Foodify</div>
-        <div class="tagline">Recipes + Groceries E-Commerce</div>
-        </div>
+        <div class="brand-name">foodify.</div>
+        <p class="text-muted small fw-bold text-uppercase ls-wide">Premium Kitchen Access</p>
     </div>
-</div>
 
     <div class="auth-body">
-        <h2>Welcome Back!</h2>
-        <p class="subtitle">Enter your email and password to log in.</p>
+        <h2>Welcome Back</h2>
+        <p class="subtitle">Please enter your details to continue.</p>
 
         <?php if ($error): ?>
-            <div class="alert-custom alert-error">
-                <i class="bi bi-exclamation-circle"></i> <?= htmlspecialchars($error) ?>
+            <div class="alert-error" id="errorAlert">
+                <i class="bi bi-exclamation-circle-fill fs-5"></i> <?= htmlspecialchars($error) ?>
             </div>
         <?php endif; ?>
 
         <form method="POST" action="" id="loginForm">
-
             <div class="input-group-custom">
-                <i class="input-left-icon bi bi-envelope"></i>
+                <i class="input-left-icon bi bi-envelope-fill"></i>
                 <input type="email" name="email" id="loginEmail" placeholder="Email Address"
                        value="<?= htmlspecialchars($_POST['email'] ?? '') ?>" required>
             </div>
 
             <div class="input-group-custom">
-                <i class="input-left-icon bi bi-lock"></i>
+                <i class="input-left-icon bi bi-shield-lock-fill"></i>
                 <input type="password" name="password" id="loginPassword" placeholder="Password" required>
                 <button type="button" class="eye-toggle" id="eyeToggle">
-                    <i class="bi bi-eye" id="eyeIcon"></i>
+                    <i class="bi bi-eye-fill" id="eyeIcon"></i>
                 </button>
             </div>
 
@@ -351,13 +322,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 <a href="forgot_password.php">Forgot password?</a>
             </div>
 
-            <button type="submit" class="btn-login">
-                <i class="bi bi-box-arrow-in-right"></i> Log In
+            <button type="submit" class="btn-login" id="submitBtn">
+                <span>Log In</span> <i class="bi bi-arrow-right ms-1"></i>
             </button>
         </form>
 
         <div class="register-link">
-            Don't have an account? <a href="register.php">Register now</a>
+            New here? <a href="register.php">Create an account</a>
         </div>
     </div>
 </div>
@@ -366,18 +337,37 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     const eyeToggle = document.getElementById('eyeToggle');
     const eyeIcon   = document.getElementById('eyeIcon');
     const pwdInput  = document.getElementById('loginPassword');
+    const loginForm = document.getElementById('loginForm');
+    const submitBtn = document.getElementById('submitBtn');
 
+    // Password Toggle Logic
     eyeToggle.addEventListener('click', () => {
         if (pwdInput.type === 'password') {
             pwdInput.type = 'text';
-            eyeIcon.className = 'bi bi-eye-slash';
+            eyeIcon.classList.replace('bi-eye-fill', 'bi-eye-slash-fill');
         } else {
             pwdInput.type = 'password';
-            eyeIcon.className = 'bi bi-eye';
+            eyeIcon.classList.replace('bi-eye-slash-fill', 'bi-eye-fill');
         }
     });
+
+    // Loading State UI Enhancement
+    loginForm.addEventListener('submit', () => {
+        submitBtn.style.opacity = '0.7';
+        submitBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span> Signing in...';
+    });
+
+    // Auto hide error after 3 seconds
+    const errorAlert = document.getElementById('errorAlert');
+    if (errorAlert) {
+        setTimeout(function() {
+            errorAlert.style.transition = 'all 0.5s ease';
+            errorAlert.style.opacity = '0';
+            errorAlert.style.transform = 'translateY(-10px)';
+            setTimeout(function() { errorAlert.remove(); }, 500);
+        }, 3000);
+    }
 </script>
 
-<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/js/bootstrap.bundle.min.js"></script>
 </body>
 </html>

@@ -1,19 +1,38 @@
 <?php
 session_start();
 require_once __DIR__ . '/../../config/database.php';
+require_once __DIR__ . '/../../config/mailer.php';
 
 $step    = 1;
 $error   = '';
 $success = '';
 $email   = '';
 
-// Step 2 — Verify email and show reset form
-if (isset($_GET['step']) && $_GET['step'] == 2 && isset($_GET['email'])) {
-    $step  = 2;
-    $email = base64_decode($_GET['email']);
+// ── STEP 2: Load from URL token ──
+if (isset($_GET['token'])) {
+    $token = $_GET['token'];
+
+    $stmt = $conn->prepare("SELECT email, expires_at FROM password_resets WHERE token = ?");
+    $stmt->bind_param("s", $token);
+    $stmt->execute();
+    $result = $stmt->get_result()->fetch_assoc();
+
+    if (!$result) {
+        $error = 'Invalid or expired reset link. Please request a new one.';
+        $step  = 1;
+    } elseif (strtotime($result['expires_at']) < time()) {
+        $del = $conn->prepare("DELETE FROM password_resets WHERE token = ?");
+        $del->bind_param("s", $token);
+        $del->execute();
+        $error = 'This reset link has expired. Please request a new one.';
+        $step  = 1;
+    } else {
+        $step  = 2;
+        $email = $result['email'];
+    }
 }
 
-// Handle Step 1 — Check email exists
+// ── POST STEP 1: Check email & send reset link ──
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['step']) && $_POST['step'] == 1) {
     $email = trim($_POST['email'] ?? '');
 
@@ -30,40 +49,76 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['step']) && $_POST['st
         if ($stmt->num_rows === 0) {
             $error = 'Email not found.';
         } else {
-            // Go to step 2
-            $encoded = base64_encode($email);
-            header("Location: forgot_password.php?step=2&email=$encoded");
-            exit();
+            // Generate secure token
+            $token     = bin2hex(random_bytes(32));
+            $expiresAt = date('Y-m-d H:i:s', strtotime('+15 minutes'));
+
+            // Delete old token for this email
+            $del = $conn->prepare("DELETE FROM password_resets WHERE email = ?");
+            $del->bind_param("s", $email);
+            $del->execute();
+
+            // Insert new token
+            $ins = $conn->prepare("INSERT INTO password_resets (email, token, expires_at) VALUES (?, ?, ?)");
+            $ins->bind_param("sss", $email, $token, $expiresAt);
+            $ins->execute();
+
+            // Build reset link — tukar domain kalau dah live
+            $resetLink = "http://localhost/Foodifyy/modules/auth/forgot_password.php?token=" . $token;
+
+            if (sendResetEmail($email, $resetLink)) {
+                $success = 'sent';
+            } else {
+                $error = 'Failed to send email. Please try again.';
+            }
         }
     }
 }
 
-// Handle Step 2 — Reset password
+// ── POST STEP 2: Reset password ──
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['step']) && $_POST['step'] == 2) {
-    $email    = trim($_POST['email'] ?? '');
+    $token    = $_POST['token']    ?? '';
+    $email    = $_POST['email']    ?? '';
     $password = $_POST['password'] ?? '';
-    $confirm  = $_POST['confirm'] ?? '';
+    $confirm  = $_POST['confirm']  ?? '';
 
-    if (!$password || !$confirm) {
-        $step  = 2;
+    $stmt = $conn->prepare("SELECT email, expires_at FROM password_resets WHERE token = ? AND email = ?");
+    $stmt->bind_param("ss", $token, $email);
+    $stmt->execute();
+    $result = $stmt->get_result()->fetch_assoc();
+
+    if (!$result) {
+        $error = 'Invalid reset link.';
+        $step  = 1;
+    } elseif (strtotime($result['expires_at']) < time()) {
+        $del = $conn->prepare("DELETE FROM password_resets WHERE token = ?");
+        $del->bind_param("s", $token);
+        $del->execute();
+        $error = 'Reset link expired. Please request a new one.';
+        $step  = 1;
+    } elseif (!$password || !$confirm) {
         $error = 'Please fill in all fields.';
+        $step  = 2;
     } elseif (strlen($password) < 8) {
-        $step  = 2;
         $error = 'Password must be at least 8 characters.';
-    } elseif ($password !== $confirm) {
         $step  = 2;
+    } elseif ($password !== $confirm) {
         $error = 'Passwords do not match.';
+        $step  = 2;
     } else {
         $hashed = password_hash($password, PASSWORD_DEFAULT);
-        $stmt   = $conn->prepare("UPDATE users SET password = ? WHERE email = ?");
-        $stmt->bind_param("ss", $hashed, $email);
+        $upd    = $conn->prepare("UPDATE users SET password = ? WHERE email = ?");
+        $upd->bind_param("ss", $hashed, $email);
 
-        if ($stmt->execute()) {
-            $success = 'Password updated! Redirecting to login...';
+        if ($upd->execute()) {
+            $del = $conn->prepare("DELETE FROM password_resets WHERE token = ?");
+            $del->bind_param("s", $token);
+            $del->execute();
+            $success = 'done';
             header("refresh:2;url=login.php");
         } else {
-            $step  = 2;
             $error = 'Failed to update password. Please try again.';
+            $step  = 2;
         }
     }
 }
@@ -74,355 +129,227 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['step']) && $_POST['st
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Forgot Password – Foodify</title>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
-    <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800;900&family=Playfair+Display:wght@700;800&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;700;800&family=Playfair+Display:wght@900&display=swap" rel="stylesheet">
     <style>
         :root {
-            --primary-green: #2D7A3A;
-            --primary-orange: #FF6B00;
-            --primary-orange-light: #FF8C38;
-            --dark-text: #1A1A1A;
-            --muted: #888;
-            --border: #E8E8E8;
+            --primary-grad: linear-gradient(135deg, #FF6B6B 0%, #FF8E53 100%);
+            --accent: #FF6B6B;
+            --bg-gradient: radial-gradient(at 0% 0%, rgba(255,107,107,0.15) 0px, transparent 50%),
+                           radial-gradient(at 100% 0%, rgba(255,142,83,0.15) 0px, transparent 50%),
+                           radial-gradient(at 100% 100%, rgba(255,107,107,0.1) 0px, transparent 50%),
+                           radial-gradient(at 0% 100%, rgba(255,142,83,0.15) 0px, transparent 50%);
         }
-        * { margin: 0; padding: 0; box-sizing: border-box; }
         body {
-                font-family: 'Nunito', sans-serif;
-                background:
-                    radial-gradient(ellipse at 20% 50%, rgba(120, 198, 121, 0.25) 0%, transparent 60%),
-                    radial-gradient(ellipse at 80% 20%, rgba(255, 183, 77, 0.2) 0%, transparent 55%),
-                    radial-gradient(ellipse at 60% 80%, rgba(100, 181, 246, 0.15) 0%, transparent 50%),
-                    linear-gradient(135deg, #f0faf0 0%, #fffde7 50%, #e3f2fd 100%);
-                min-height: 100vh;
-                display: flex;
-                align-items: center;
-                justify-content: center;
-                padding: 20px;
-            }
+            font-family: 'Plus Jakarta Sans', sans-serif;
+            background-color: #fdfdfd;
+            background-image: var(--bg-gradient);
+            background-attachment: fixed;
+            min-height: 100vh;
+            display: flex; align-items: center; justify-content: center;
+            padding: 20px; margin: 0;
+        }
         .auth-card {
-            width: 100%;
-            max-width: 500px;
-            background: white;
-            border-radius: 36px;
-            box-shadow: 0 25px 50px -12px rgba(0,0,0,0.2);
-            overflow: hidden;
-            transition: transform 0.3s ease;
+            width: 100%; max-width: 450px;
+            background: rgba(255,255,255,0.9);
+            backdrop-filter: blur(15px);
+            border-radius: 32px;
+            box-shadow: 0 25px 70px rgba(0,0,0,0.07);
+            border: 1px solid rgba(255,255,255,0.5);
+            animation: fadeIn 0.6s ease-out;
+            padding: 3.5rem 2.5rem;
         }
-        .auth-card:hover { transform: translateY(-4px); }
-        .auth-header {
-            background: linear-gradient(135deg, var(--primary-green) 0%, #3E9B4E 60%, #9FA825 100%);
-            padding: 2.2rem 2rem 2rem;
-            text-align: center;
-            color: white;
-            position: relative;
-            overflow: hidden;
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to   { opacity: 1; transform: translateY(0); }
         }
-        .auth-header::before {
-            content: '';
-            position: absolute;
-            top: -40px; right: -40px;
-            width: 140px; height: 140px;
-            border-radius: 50%;
-            background: rgba(255,255,255,0.07);
+        .brand-name {
+            font-family: 'Playfair Display', serif; font-weight: 900;
+            font-size: 2.8rem;
+            background: var(--primary-grad);
+            -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+            text-align: center; margin-bottom: 0.2rem; letter-spacing: -1px;
         }
-        .auth-header::after {
-            content: '';
-            position: absolute;
-            bottom: -30px; left: -30px;
-            width: 110px; height: 110px;
-            border-radius: 50%;
-            background: rgba(255,255,255,0.05);
+        h2 { font-weight: 800; font-size: 1.8rem; letter-spacing: -0.8px; color: #1a1a1a; }
+        .subtitle { color: #8e8e93; font-size: 0.95rem; margin-bottom: 2rem; }
+
+        .input-group-custom { position: relative; margin-bottom: 1.2rem; }
+        .input-left-icon {
+            position: absolute; left: 20px; top: 50%;
+            transform: translateY(-50%); color: #A0A0A0; z-index: 5;
         }
-        .logo-wrap {
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            gap: 12px;
-            margin-bottom: 6px;
-            position: relative;
-            z-index: 1;
-        }
-        .logo-image {
-            width: 60px;
-            height: 60px;
-            object-fit: contain;
-            border-radius: 14px;
-            filter: drop-shadow(0 4px 8px rgba(0,0,0,0.2));
-}
-        .logo-text { line-height: 1; text-align: left; }
-        .logo-text .brand {
-            font-size: 28px;
-            font-weight: 900;
-            letter-spacing: -0.5px;
-            color: white;
-        }
-        .logo-text .tagline {
-            font-size: 11px;
-            font-weight: 600;
-            opacity: 0.85;
-        }
-        .auth-body { padding: 2rem 2rem 2.5rem; }
-        .auth-body h2 {
-            font-family: 'Playfair Display', serif;
-            font-size: 26px;
-            font-weight: 800;
-            color: var(--dark-text);
-            margin-bottom: 4px;
-        }
-        .auth-body .subtitle {
-            color: var(--muted);
-            font-size: 14px;
-            margin-bottom: 24px;
-        }
-        .input-group-custom {
-            position: relative;
-            margin-bottom: 16px;
-        }
-        .input-group-custom i.input-icon {
-            position: absolute;
-            left: 16px;
-            top: 50%;
-            transform: translateY(-50%);
-            color: #bbb;
-            font-size: 1.1rem;
-            z-index: 2;
-            transition: color 0.2s;
-        }
-        .input-group-custom:focus-within i.input-icon { color: var(--primary-orange); }
         .input-group-custom input {
-            width: 100%;
-            padding: 13px 44px 13px 44px;
-            border: 1.5px solid var(--border);
-            border-radius: 14px;
-            font-family: 'Nunito', sans-serif;
-            font-size: 0.95rem;
-            font-weight: 600;
-            transition: all 0.2s;
-            background: #fafafa;
-            color: var(--dark-text);
+            width: 100%; padding: 16px 20px 16px 52px;
+            background: #F8F9FA; border: 2px solid #F1F3F5;
+            border-radius: 18px; font-weight: 600;
+            transition: all 0.3s ease; color: #2d3436;
+            font-family: 'Plus Jakarta Sans', sans-serif;
         }
         .input-group-custom input:focus {
-            outline: none;
-            border-color: var(--primary-orange);
-            background: white;
-            box-shadow: 0 0 0 4px rgba(255,107,0,0.08);
+            outline: none; background: white; border-color: var(--accent);
+            box-shadow: 0 10px 25px rgba(255,107,107,0.1);
         }
         .eye-toggle {
-            position: absolute;
-            right: 14px;
-            top: 50%;
+            position: absolute; right: 15px; top: 50%;
             transform: translateY(-50%);
-            background: none;
-            border: none;
-            color: #bbb;
-            cursor: pointer;
-            font-size: 1rem;
-            z-index: 3;
-            padding: 4px 6px;
-            transition: color 0.2s;
-            display: flex;
-            align-items: center;
+            background: none; border: none; color: #adb5bd;
+            padding: 8px; cursor: pointer; z-index: 5;
         }
-        .eye-toggle:hover { color: var(--primary-orange); }
         .btn-submit {
-            background: var(--primary-orange);
-            border: none;
-            padding: 14px;
-            border-radius: 50px;
-            font-family: 'Nunito', sans-serif;
-            font-weight: 800;
-            font-size: 15px;
-            color: white;
-            width: 100%;
-            transition: all 0.2s;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            gap: 8px;
+            background: var(--primary-grad); color: white; border: none;
+            width: 100%; padding: 18px; border-radius: 18px;
+            font-weight: 800; text-transform: uppercase; letter-spacing: 0.5px;
+            margin-top: 1rem; transition: all 0.4s;
+            box-shadow: 0 12px 24px rgba(255,107,107,0.25);
+            display: flex; align-items: center; justify-content: center; gap: 10px;
+            font-family: 'Plus Jakarta Sans', sans-serif; cursor: pointer;
         }
-        .btn-submit:hover {
-            background: var(--primary-orange-light);
-            transform: scale(1.02);
-            box-shadow: 0 8px 20px rgba(255,107,0,0.3);
-        }
-        .back-link {
-            text-align: center;
-            margin-top: 20px;
-            color: var(--muted);
-            font-size: 14px;
-            font-weight: 600;
-        }
-        .back-link a {
-            color: var(--primary-orange);
-            text-decoration: none;
-            font-weight: 800;
-        }
-        .back-link a:hover { text-decoration: underline; }
-        .alert-custom {
-            padding: 12px 16px;
-            border-radius: 12px;
-            font-size: 13px;
-            font-weight: 700;
-            margin-bottom: 16px;
-            width: 100%;
-            box-sizing: border-box;
-        }
-        .alert-error {
-            background: #FEE2E2;
-            color: #DC2626;
-            border: 1px solid #FECACA;
-        }
-        .alert-success {
-            background: #DCFCE7;
-            color: #16A34A;
-            border: 1px solid #BBF7D0;
-        }
-        .step-indicator {
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            gap: 8px;
-            margin-bottom: 24px;
-        }
-        .step-dot {
-            width: 10px;
-            height: 10px;
-            border-radius: 50%;
-            background: var(--border);
-            transition: background 0.3s;
-        }
-        .step-dot.active { background: var(--primary-orange); }
-        .step-line {
-            width: 40px;
-            height: 2px;
-            background: var(--border);
-        }
+        .btn-submit:hover { transform: translateY(-3px); box-shadow: 0 18px 30px rgba(255,107,107,0.35); }
         .back-home {
-            position: fixed;
-            top: 24px; left: 24px;
-            background: white;
-            padding: 8px 18px;
-            border-radius: 40px;
-            text-decoration: none;
-            font-family: 'Nunito', sans-serif;
-            font-weight: 700;
-            font-size: 13px;
-            color: var(--primary-green);
-            box-shadow: 0 2px 12px rgba(0,0,0,0.1);
-            transition: all 0.2s;
-            z-index: 100;
-            display: flex;
-            align-items: center;
-            gap: 6px;
+            position: fixed; top: 40px; left: 40px;
+            color: #1A1C1E; text-decoration: none; font-weight: 700;
+            display: flex; align-items: center; gap: 10px; transition: 0.3s; z-index: 100;
         }
-        .back-home:hover {
-            background: var(--primary-green);
-            color: white;
-            transform: translateX(-3px);
+        .back-home:hover { color: var(--accent); transform: translateX(-5px); }
+        .alert-custom {
+            border-radius: 16px; padding: 16px; font-size: 0.9rem;
+            font-weight: 600; margin-bottom: 1.8rem;
+            display: flex; align-items: center; gap: 12px;
         }
-        @media (max-width: 575px) {
-            .auth-card { border-radius: 28px; }
-            .auth-body { padding: 1.5rem; }
+        .alert-error   { background: #fff5f5; color: #e03131; border: 1px solid rgba(224,49,49,0.1); }
+        .alert-success { background: #f0fff4; color: #2f855a; border: 1px solid rgba(47,133,90,0.1); }
+        .step-indicator { display: flex; align-items: center; gap: 8px; margin-bottom: 1.5rem; }
+        .step-dot { width: 30px; height: 6px; border-radius: 10px; background: #eee; transition: 0.3s; }
+        .step-dot.active { background: var(--accent); width: 50px; }
+
+        /* Email sent box */
+        .sent-box { text-align: center; padding: 1rem 0 0.5rem; }
+        .sent-icon {
+            width: 90px; height: 90px; border-radius: 50%;
+            background: #FFF0EB;
+            display: flex; align-items: center; justify-content: center;
+            margin: 0 auto 1.5rem;
+        }
+
+        /* Password updated box */
+        .done-box { text-align: center; padding: 1rem 0 0.5rem; }
+        .done-icon {
+            width: 90px; height: 90px; border-radius: 50%;
+            background: #FFF0EB;
+            display: flex; align-items: center; justify-content: center;
+            margin: 0 auto 1.5rem;
+        }
+
+        @media (max-width: 576px) {
+            .auth-card { padding: 2.5rem 1.8rem; }
+            .back-home { top: 20px; left: 20px; }
         }
     </style>
 </head>
 <body>
 
 <a href="login.php" class="back-home">
-    <i class="bi bi-arrow-left"></i> Back to Login
+    <i class="bi bi-arrow-left-circle-fill fs-4"></i> <span>Back to Login</span>
 </a>
 
 <div class="auth-card">
-    <div class="auth-header">
-        <div class="logo-wrap">
-    <img src="../../assets/images/logo.png" alt="Foodify Logo" class="logo-image">
-    <div class="logo-text">
-        <div class="brand">Foodify</div>
-        <div class="tagline">Recipes + Groceries E-Commerce</div>
-    </div>
-    </div>
-</div>
+    <div class="brand-name">foodify.</div>
 
-    <div class="auth-body">
+    <div class="step-indicator">
+        <div class="step-dot <?= $step >= 1 ? 'active' : '' ?>"></div>
+        <div class="step-dot <?= $step >= 2 ? 'active' : '' ?>"></div>
+    </div>
 
-        <!-- Step Indicator -->
-        <div class="step-indicator">
-            <div class="step-dot <?= $step >= 1 ? 'active' : '' ?>"></div>
-            <div class="step-line"></div>
-            <div class="step-dot <?= $step >= 2 ? 'active' : '' ?>"></div>
+    <?php if ($success === 'sent'): ?>
+    <!-- ── EMAIL SENT ── -->
+        <div class="sent-box">
+            <div class="sent-icon">
+                <i class="bi bi-envelope-check-fill" style="font-size:2.5rem; color:#FF6B6B;"></i>
+            </div>
+            <h2 class="mb-2">Check Your Email!</h2>
+            <p class="text-muted">Reset link sent to<br><strong><?= htmlspecialchars($email) ?></strong></p>
+            <p class="text-muted" style="font-size:0.85rem; margin-top:1rem;">
+                Link expires in <b>15 minutes</b>.<br>Check your spam folder if not found.
+            </p>
         </div>
 
-        <?php if ($step == 1): ?>
+    <?php elseif ($success === 'done'): ?>
+    <!-- ── PASSWORD UPDATED ── -->
+        <div class="done-box">
+            <div class="done-icon">
+                <i class="bi bi-check-lg" style="font-size:2.5rem; color:#FF6B6B;"></i>
+            </div>
+            <h2 class="mb-2">Password Updated!</h2>
+            <p class="text-muted">Your password has been reset successfully.<br>Redirecting to login...</p>
+        </div>
 
-            <h2>Forgot Password?</h2>
-            <p class="subtitle">Enter your registered email to reset your password.</p>
+    <?php elseif ($step == 1): ?>
+    <!-- ── STEP 1: Enter Email ── -->
+        <h2>Forgot Password?</h2>
+        <p class="subtitle">Enter your email and we'll send you a reset link.</p>
 
-            <?php if ($error): ?>
-                <div class="alert-custom alert-error">
-                    <i class="bi bi-exclamation-circle"></i> <?= htmlspecialchars($error) ?>
-                </div>
-            <?php endif; ?>
-
-            <form method="POST" action="">
-                <input type="hidden" name="step" value="1">
-                <div class="input-group-custom">
-                    <i class="bi bi-envelope input-icon"></i>
-                    <input type="email" name="email" placeholder="Email Address"
-                           value="<?= htmlspecialchars($email) ?>" required>
-                </div>
-                <button type="submit" class="btn-submit">
-                    <i class="bi bi-search"></i> Find Account
-                </button>
-            </form>
-
-        <?php elseif ($step == 2): ?>
-
-            <h2>Reset Password</h2>
-            <p class="subtitle">Create a new password for <strong><?= htmlspecialchars($email) ?></strong></p>
-
-            <?php if ($error): ?>
-                <div class="alert-custom alert-error">
-                    <i class="bi bi-exclamation-circle"></i> <?= htmlspecialchars($error) ?>
-                </div>
-            <?php endif; ?>
-
-            <?php if ($success): ?>
-                <div class="alert-custom alert-success">
-                    <i class="bi bi-check-circle"></i> <?= htmlspecialchars($success) ?>
-                </div>
-            <?php endif; ?>
-
-            <form method="POST" action="">
-                <input type="hidden" name="step" value="2">
-                <input type="hidden" name="email" value="<?= htmlspecialchars($email) ?>">
-
-                <div class="input-group-custom">
-                    <i class="bi bi-lock input-icon"></i>
-                    <input type="password" name="password" id="newPassword" placeholder="New Password" required>
-                    <button type="button" class="eye-toggle" onclick="toggleEye('newPassword', 'eye1')">
-                        <i class="bi bi-eye" id="eye1"></i>
-                    </button>
-                </div>
-
-                <div class="input-group-custom">
-                    <i class="bi bi-lock-fill input-icon"></i>
-                    <input type="password" name="confirm" id="confirmPassword" placeholder="Confirm Password" required>
-                    <button type="button" class="eye-toggle" onclick="toggleEye('confirmPassword', 'eye2')">
-                        <i class="bi bi-eye" id="eye2"></i>
-                    </button>
-                </div>
-
-                <button type="submit" class="btn-submit">
-                    <i class="bi bi-check-circle"></i> Reset Password
-                </button>
-            </form>
-
+        <?php if ($error): ?>
+            <div class="alert-custom alert-error">
+                <i class="bi bi-exclamation-circle-fill"></i> <?= htmlspecialchars($error) ?>
+            </div>
         <?php endif; ?>
 
-        <div class="back-link">
-            Remember your password? <a href="login.php">Log in</a>
-        </div>
+        <form method="POST" id="forgotForm">
+            <input type="hidden" name="step" value="1">
+            <div class="input-group-custom">
+                <i class="input-left-icon bi bi-envelope-fill"></i>
+                <input type="email" name="email" placeholder="Email Address"
+                       value="<?= htmlspecialchars($email) ?>" required>
+            </div>
+            <button type="submit" class="btn-submit" id="submitBtn1">
+                <span>Send Reset Link</span> <i class="bi bi-send-fill"></i>
+            </button>
+        </form>
+
+    <?php elseif ($step == 2): ?>
+    <!-- ── STEP 2: New Password ── -->
+        <h2>Reset Password</h2>
+        <p class="subtitle">Set a new password for<br><strong><?= htmlspecialchars($email) ?></strong></p>
+
+        <?php if ($error): ?>
+            <div class="alert-custom alert-error">
+                <i class="bi bi-exclamation-circle-fill"></i> <?= htmlspecialchars($error) ?>
+            </div>
+        <?php endif; ?>
+
+        <form method="POST" id="resetForm">
+            <input type="hidden" name="step"  value="2">
+            <input type="hidden" name="token" value="<?= htmlspecialchars($_GET['token'] ?? $_POST['token'] ?? '') ?>">
+            <input type="hidden" name="email" value="<?= htmlspecialchars($email) ?>">
+
+            <div class="input-group-custom">
+                <i class="input-left-icon bi bi-shield-lock-fill"></i>
+                <input type="password" name="password" id="newPassword"
+                       placeholder="New Password (min. 8 characters)" required>
+                <button type="button" class="eye-toggle" onclick="toggleEye('newPassword','eye1')">
+                    <i class="bi bi-eye-fill" id="eye1"></i>
+                </button>
+            </div>
+
+            <div class="input-group-custom">
+                <i class="input-left-icon bi bi-shield-check"></i>
+                <input type="password" name="confirm" id="confirmPassword"
+                       placeholder="Confirm New Password" required>
+                <button type="button" class="eye-toggle" onclick="toggleEye('confirmPassword','eye2')">
+                    <i class="bi bi-eye-fill" id="eye2"></i>
+                </button>
+            </div>
+
+            <button type="submit" class="btn-submit" id="submitBtn2">
+                <span>Update Password</span> <i class="bi bi-check-lg"></i>
+            </button>
+        </form>
+    <?php endif; ?>
+
+    <div class="text-center mt-4">
+        <span class="text-muted small">Remember it?</span>
+        <a href="login.php" class="text-dark text-decoration-none small fw-bold ms-1">Log in here</a>
     </div>
 </div>
 
@@ -432,14 +359,23 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['step']) && $_POST['st
         const ico = document.getElementById(iconId);
         if (inp.type === 'password') {
             inp.type = 'text';
-            ico.className = 'bi bi-eye-slash';
+            ico.className = 'bi bi-eye-slash-fill';
         } else {
             inp.type = 'password';
-            ico.className = 'bi bi-eye';
+            ico.className = 'bi bi-eye-fill';
         }
     }
-</script>
 
-<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/js/bootstrap.bundle.min.js"></script>
+    [['forgotForm','submitBtn1'], ['resetForm','submitBtn2']].forEach(([formId, btnId]) => {
+        const f = document.getElementById(formId);
+        if (f) {
+            f.addEventListener('submit', () => {
+                const btn = document.getElementById(btnId);
+                btn.style.opacity = '0.7';
+                btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span> Processing...';
+            });
+        }
+    });
+</script>
 </body>
 </html>

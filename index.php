@@ -112,21 +112,19 @@ $items = $res_items->fetch_all(MYSQLI_ASSOC);
         .sidebar-footer { padding-top: 2rem; border-top: 1px solid rgba(255,255,255,0.1); }
         /* -- PROFILE CARD ANIMATION -- */
         .user-card {
-            background: rgba(255,255,255,0.03); 
-            border: 1px solid rgba(255,255,255,0.08);
-            padding: 15px; 
-            border-radius: 20px; 
-            transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1); /* Animasi smooth */
-            cursor: pointer;
-            user-select: none;
-        }
+    background: rgba(255,255,255,0.03);
+    border: 1px solid rgba(255,255,255,0.08);
+    padding: 15px;
+    border-radius: 20px;
+    transition: all 0.2s ease;
+    cursor: pointer;
+}
 
         /* Kesan bila mouse lalu (hover) */
         .user-card:hover {
-            background: rgba(255,255,255,0.07);
-            border-color: rgba(255,255,255,0.15);
-            transform: translateY(-2px);
-        }
+    background: rgba(255,255,255,0.07);
+    transform: translateY(-2px);
+}
 
         /* Kesan bila diklik (active) */
         .user-card:active {
@@ -225,25 +223,24 @@ $items = $res_items->fetch_all(MYSQLI_ASSOC);
         <!-- Selubungi kad dengan link supaya keseluruhan kad boleh diklik -->
         <a href="modules/profile/profile.php" class="text-decoration-none d-block">
             <div class="user-card d-flex align-items-center gap-3 mb-3">
-                <?php $navProfileSrc = getImageSrc($nav_profile_img, 'assets/images/profiles/'); ?>
-                
-                <?php if ($navProfileSrc): ?>
-                    <img src="<?= htmlspecialchars($navProfileSrc) ?>" style="width:42px; height:42px; border-radius:12px; object-fit:cover;">
-                <?php else: ?>
-                    <div class="text-white rounded-3 p-2 d-flex justify-content-center align-items-center" style="width:42px; height:42px; background: var(--primary-grad);">
-                        <i class="bi bi-person-fill"></i>
-                    </div>
-                <?php endif; ?>
+            <?php $navProfileSrc = getImageSrc($nav_profile_img, '../../assets/images/profiles/'); ?>
+            <?php if ($navProfileSrc): ?>
+                <img src="<?= htmlspecialchars($navProfileSrc) ?>" style="width:42px; height:42px; border-radius:12px; object-fit:cover;">
+            <?php else: ?>
+                <div class="text-white rounded-3 p-2 d-flex justify-content-center align-items-center" style="width:42px; height:42px; background: var(--primary-grad);">
+                    <i class="bi bi-person-fill"></i>
+                </div>
+            <?php endif; ?>
 
-                <div class="overflow-hidden">
-                    <div class="text-white fw-bold small text-truncate" style="max-width: 130px;">
-                        <?= htmlspecialchars($username) ?>
-                    </div>
-                    <div style="font-size: 0.65rem; color: var(--accent); font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px;">
-                        <?= htmlspecialchars($nav_role) ?>
-                    </div>
+            <div class="overflow-hidden">
+                <div class="text-white fw-bold small text-truncate" style="max-width: 130px;">
+                    <?= htmlspecialchars($username) ?>
+                </div>
+                <div style="font-size: 0.65rem; color: var(--accent); font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px;">
+                    <?= htmlspecialchars($nav_role) ?>
                 </div>
             </div>
+        </div>
         </a>
         
         <a href="modules/auth/logout.php" class="btn btn-outline-danger w-100 rounded-3 py-2 border-opacity-25" style="font-size:0.85rem">
