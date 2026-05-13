@@ -307,7 +307,8 @@ $icons = [
         .card-title { 
             font-weight: 800; font-size: 1.3rem; 
             color: #1A1C1E; margin-bottom: 0.8rem;
-            display: -webkit-box; -webkit-line-clamp: 1; -webkit-box-orient: vertical;
+            display: -webkit-box; -webkit-line-clamp: 1; line-clamp: 3;
+ -webkit-box-orient: vertical;
             overflow: hidden;
         }
         .card-text {
@@ -480,7 +481,10 @@ $icons = [
                             <div class="card-content">
                                 <div class="d-flex justify-content-between align-items-center mb-2">
                                     <span class="card-cat" style="margin-bottom:0;"><?= htmlspecialchars($recipe['meal_type']) ?></span>
-                                    <div class="meta-item"><i class="bi bi-stopwatch"></i> <?= htmlspecialchars($recipe['cooking_time'] ?? '20m') ?></div>
+                                    <div class="meta-item">
+                                        <i class="bi bi-stopwatch"></i>
+                                        <?= htmlspecialchars($recipe['cooking_time'] ?? '20') ?> mins
+                                    </div>
                                 </div>
                                 <h3 class="card-title"><?= htmlspecialchars($recipe['title']) ?></h3>
                                 <p class="card-text"><?= htmlspecialchars($recipe['description']) ?></p>
