@@ -248,7 +248,10 @@ $embedUrl = (!empty($videoUrl) && str_contains($videoUrl, 'cloudinary.com')) ? $
                 <p class="text-muted"><?= htmlspecialchars($recipe['description']) ?></p>
                 <div>
                     <span class="badge bg-dark rounded-pill"><?= htmlspecialchars($recipe['cuisine']) ?></span>
-                    <span class="ms-2 text-muted small"><i class="bi bi-clock"></i> <?= htmlspecialchars($recipe['cooking_time'] ?? '45m') ?></span>
+                    <span class="ms-2 text-muted small">
+                        <i class="bi bi-clock"></i>
+                        <?= htmlspecialchars($recipe['cooking_time']) ?> mins
+                    </span>
                 </div>
             </div>
         </div>
