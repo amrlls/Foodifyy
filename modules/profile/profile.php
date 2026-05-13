@@ -389,8 +389,7 @@ $profileSrc = getImageSrc($user['profile_image'], '../../assets/images/profiles/
 </div>
 
 
-<!--
-     MODAL 1 — PROFILE CONFIRM -->
+<!-- MODAL 1 — PROFILE CONFIRM -->
 <div id="profileConfirmOverlay" class="modal-overlay">
     <div class="confirm-box">
         <div class="mb-3">
@@ -405,8 +404,7 @@ $profileSrc = getImageSrc($user['profile_image'], '../../assets/images/profiles/
     </div>
 </div>
 
-<!-- 
-     MODAL 2 — PROFILE SUCCESS -->
+<!-- MODAL 2 — PROFILE SUCCESS -->
 <div id="profileSuccessOverlay" class="modal-overlay <?= (isset($_GET['status']) && $_GET['status'] == 'profile_success') ? 'active' : '' ?>">
     <div class="confirm-box">
         <div class="mb-3">
@@ -422,8 +420,7 @@ $profileSrc = getImageSrc($user['profile_image'], '../../assets/images/profiles/
     </div>
 </div>
 
-<!-- 
-     MODAL 3 — PASSWORD CONFIRM -->
+<!-- MODAL 3 — PASSWORD CONFIRM -->
 <div id="pwdConfirmOverlay" class="modal-overlay">
     <div class="confirm-box">
         <div class="mb-3">
@@ -438,8 +435,7 @@ $profileSrc = getImageSrc($user['profile_image'], '../../assets/images/profiles/
     </div>
 </div>
 
-<!-- 
-     MODAL 4 — PASSWORD SUCCESS -->
+<!-- MODAL 4 — PASSWORD SUCCESS -->
 <div id="pwdSuccessOverlay" class="modal-overlay <?= ($status == 'password_success') ? 'active' : '' ?>">
     <div class="confirm-box">
         <div class="mb-3">
@@ -455,9 +451,7 @@ $profileSrc = getImageSrc($user['profile_image'], '../../assets/images/profiles/
     </div>
 </div>
 
-<!-- 
-     MODAL 5 — ERROR: FIELD KOSONG (client-side)
- -->
+<!-- MODAL 5 — ERROR: FIELD KOSONG (client-side) -->
 <div id="errIncompleteOverlay" class="modal-overlay">
     <div class="confirm-box">
         <div class="mb-3">
@@ -473,8 +467,7 @@ $profileSrc = getImageSrc($user['profile_image'], '../../assets/images/profiles/
     </div>
 </div>
 
-<!-- 
-     MODAL 6 — ERROR: PASSWORD TERLALU PENDEK (client-side)-->
+<!-- MODAL 6 — ERROR: PASSWORD TERLALU PENDEK (client-side)-->
 <div id="errShortOverlay" class="modal-overlay">
     <div class="confirm-box">
         <div class="mb-3">
@@ -490,8 +483,7 @@ $profileSrc = getImageSrc($user['profile_image'], '../../assets/images/profiles/
     </div>
 </div>
 
-<!-- 
-     MODAL 7 — ERROR: PASSWORD TAK SAMA (client + server) -->
+<!-- MODAL 7 — ERROR: PASSWORD TAK SAMA (client + server) -->
 <div id="errMismatchOverlay" class="modal-overlay <?= ($status == 'password_mismatch') ? 'active' : '' ?>">
     <div class="confirm-box">
         <div class="mb-3">
@@ -507,8 +499,7 @@ $profileSrc = getImageSrc($user['profile_image'], '../../assets/images/profiles/
     </div>
 </div>
 
-<!-- 
-     MODAL 8 — ERROR: PASSWORD PENDEK (server fallback)-->
+<!-- MODAL 8 — ERROR: PASSWORD PENDEK (server fallback)-->
 <div id="errShortServerOverlay" class="modal-overlay <?= ($status == 'password_short') ? 'active' : '' ?>">
     <div class="confirm-box">
         <div class="mb-3">
@@ -524,8 +515,7 @@ $profileSrc = getImageSrc($user['profile_image'], '../../assets/images/profiles/
     </div>
 </div>
 
-<!-- 
-     MODAL 9 — ERROR: WRONG CURRENT PASSWORD  -->
+<!-- MODAL 9 — ERROR: WRONG CURRENT PASSWORD  -->
 <div id="errWrongPwdOverlay" class="modal-overlay <?= ($status == 'current_pwd_wrong') ? 'active' : '' ?>">
     <div class="confirm-box">
         <div class="mb-3">
