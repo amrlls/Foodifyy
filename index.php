@@ -174,7 +174,19 @@ $items = $res_items->fetch_all(MYSQLI_ASSOC);
             cursor: pointer;
         }
         .recipe-item:hover { transform: translateY(-5px); box-shadow: 0 20px 40px rgba(0,0,0,0.05); }
-        .recipe-img-wrapper { width: 140px; height: 140px; border-radius: 20px; overflow: hidden; flex-shrink: 0; }
+        .recipe-img-wrapper { 
+        width: 210px;
+        height: 137px;
+        border-radius: 24px;
+        overflow: hidden;
+        flex-shrink: 0;
+            }
+
+        .recipe-img-wrapper img{
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
 
         .grocery-card {
             background: white; border-radius: 24px; border: none;
