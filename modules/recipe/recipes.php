@@ -46,10 +46,9 @@ if ($cuisine !== 'all') {
 }
 
 if ($search !== '') {
-    $where[]  = "(title LIKE ? OR description LIKE ?)";
+    $where[]  = "title LIKE ?";
     $params[] = "%$search%";
-    $params[] = "%$search%";
-    $types   .= 'ss';
+    $types   .= 's';
 }
 
 $whereSQL = implode(' AND ', $where);
