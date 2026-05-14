@@ -63,9 +63,10 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['update_recipe'])) {
         $new_image = uploadToCloudinary($_FILES['recipe_image']['tmp_name'], 'foodify/user_recipes');
         $conn->ping();
 
-        if ($new_image && !empty($old_image)) {
-            deleteFromCloudinary($old_image);
-        }
+        // if ($new_image && !empty($old_image)) {
+        //     deleteFromCloudinary($old_image);
+        // }
+        
 
         if (!$new_image) {
             $ext = pathinfo($_FILES['recipe_image']['name'], PATHINFO_EXTENSION);

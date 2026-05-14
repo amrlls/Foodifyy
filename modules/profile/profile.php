@@ -34,11 +34,8 @@ if (isset($_POST['update_profile'])) {
         $conn->ping();
 
         if ($new_image_url) {
-            if (!empty($user['profile_image'])) {
-                deleteFromCloudinary($user['profile_image']);
-            }
             $profile_img = $new_image_url;
-        } else {
+            }else {
             $target_dir = "../../assets/images/profiles/";
             if (!file_exists($target_dir)) { mkdir($target_dir, 0777, true); }
             $file_ext = pathinfo($_FILES["profile_pic"]["name"], PATHINFO_EXTENSION);
