@@ -154,39 +154,116 @@ $items = $res_items->fetch_all(MYSQLI_ASSOC);
             background-size: cover; 
             background-position: center;
             border-radius: 20px; 
-            padding: 4rem 4rem; /* Dikurangkan sedikit padding dalam banner */
+            padding: 4rem 4rem; 
             color: white; 
-            margin-bottom: 1.5rem; /* DIKECILKAN: Jarak antara banner dan content di bawahnya */
+            margin-bottom: 1.5rem; 
         }
 
-        /* Penyelarasan header supaya tidak terlalu jauh dari banner */
+        
         .section-header-box {
-            height: 60px; /* Dikurangkan sedikit dari 80px */
+            height: 60px; 
             display: flex;
             flex-direction: column;
             justify-content: flex-end;
             margin-bottom: 1.2rem;
         }
         .recipe-item {
-            background: white; border-radius: 24px; padding: 1.2rem;
-            transition: 0.4s cubic-bezier(0.165, 0.84, 0.44, 1);
-            border: 1px solid rgba(0,0,0,0.05); margin-bottom: 1.5rem;
-            cursor: pointer;
-        }
-        .recipe-item:hover { transform: translateY(-5px); box-shadow: 0 20px 40px rgba(0,0,0,0.05); }
-        .recipe-img-wrapper { 
-        width: 210px;
-        height: 137px;
-        border-radius: 24px;
+        background: #ffffff;
+        border-radius: 28px;
+        padding: 1rem;
+        transition: all 0.4s cubic-bezier(0.165, 0.84, 0.44, 1);
+        border: 1px solid rgba(0,0,0,0.04);
+        margin-bottom: 1.8rem;
+        cursor: pointer;
+        position: relative;
+    }
+
+    .recipe-item:hover {
+        transform: translateY(-8px) scale(1.01);
+        box-shadow: 0 25px 50px rgba(0,0,0,0.08);
+
+    }
+
+    .recipe-img-wrapper { 
+        width: 220px;
+        height: 160px;
+        border-radius: 22px;
         overflow: hidden;
         flex-shrink: 0;
-            }
+        position: relative;
+    }
 
-        .recipe-img-wrapper img{
-            width: 100%;
-            height: 100%;
-            object-fit: cover;
-        }
+    .recipe-item:hover .recipe-img-wrapper::after {
+        content: '';
+        position: absolute;
+        top: 0; left: 0; width: 100%; height: 100%;
+        background: linear-gradient(to top, rgba(0,0,0,0.2), transparent);
+    }
+
+    .recipe-item h5 {
+        font-family: 'Plus Jakarta Sans', sans-serif;
+        font-weight: 800;
+        letter-spacing: -0.5px;
+        color: #1A1C1E;
+        transition: color 0.3s ease;
+    }
+
+    .recipe-item:hover h5 {
+        color: #FF6B6B;
+    }
+
+    .cuisine-tag {
+        font-size: 0.65rem;
+        text-transform: uppercase;
+        letter-spacing: 1px;
+        font-weight: 700;
+        padding: 5px 12px;
+        background: #F8F9FA;
+        color: #6c757d;
+        border-radius: 10px;
+        display: inline-block;
+    }
+    .btn-view-details {
+    background: #1A1C1E;
+    color: #fff;
+    border: none;
+    padding: 8px 20px;
+    border-radius: 10px;
+    font-size: 0.8rem;
+    font-weight: 600;
+    transition: all 0.2s ease;
+    display: flex;
+    align-items: center;
+    gap: 5px;
+}
+
+    .btn-view-details:hover {
+        background: #444;
+        transform: translateY(-2px);
+        color: #fff;
+    }
+
+    .save-btn-circle {
+        width: 40px;
+        height: 40px;
+        border-radius: 50%;
+        background: #fff;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+        transition: all 0.3s ease;
+        border: none;
+    }
+
+    .save-btn-circle:hover {
+        transform: scale(1.1);
+        background: #fff0f0;
+    }
+
+    .save-btn-circle.active i {
+        color: #FF6B6B;
+    }
 
         .grocery-card {
             background: white; border-radius: 24px; border: none;
@@ -273,39 +350,48 @@ $items = $res_items->fetch_all(MYSQLI_ASSOC);
     <div class="row g-5">
         <!-- RECIPES SECTION -->
         <div class="col-lg-7">
-            <div class="section-header-box">
-                <div class="d-flex justify-content-between align-items-end w-100">
-                    <div>
-                        <h6 class="text-danger fw-bold text-uppercase small ls-wide" style="font-size: 0.7rem; margin-bottom: 4px;">Handpicked</h6>
-                        <h3 class="fw-bold m-0">New For You</h3>
-                    </div>
-                    <a href="modules/recipe/recipes.php" class="text-dark fw-bold text-decoration-none small">Browse All <i class="bi bi-arrow-right ms-1"></i></a>
-                </div>
+    <div class="section-header-box">
+        <div class="d-flex justify-content-between align-items-end w-100">
+            <div>
+                <h6 class="text-danger fw-bold text-uppercase small ls-wide" style="font-size: 0.7rem; margin-bottom: 4px;">Handpicked</h6>
+                <h3 class="fw-bold m-0">New For You</h3>
             </div>
-
-            <?php foreach ($recipes as $r): 
-                $activeClass = ($r['is_saved'] > 0) ? 'active' : '';
-            ?>
-            <!-- Boleh klik satu kad untuk ke details -->
-            <div class="recipe-item d-flex align-items-center gap-4" onclick="location.href='modules/recipe/recipedetail.php?id=<?= $r['recipe_id'] ?>'">
-                <div class="recipe-img-wrapper shadow-sm">
-                    <?php $imgSrc = getImageSrc($r['image'], 'assets/images/recipes/'); ?>
-                    <img src="<?= $imgSrc ? htmlspecialchars($imgSrc) : 'https://placehold.co/400x400' ?>" class="w-100 h-100 object-fit-cover">
-                </div>
-                <div class="flex-grow-1">
-                    <span class="badge bg-light text-dark mb-2 rounded-pill border"><?= $r['cuisine'] ?></span>
-                    <h5 class="fw-bold mb-1"><?= htmlspecialchars($r['title']) ?></h5>
-                    <p class="text-muted small mb-3"><?= substr(htmlspecialchars($r['description']), 0, 70) ?>...</p>
-                    <div class="d-flex justify-content-between align-items-center">
-                        <span class="btn btn-dark btn-sm rounded-pill px-4" style="font-size: 0.75rem;">View Recipe</span>
-                        <button class="btn btn-link text-danger p-0 <?= $activeClass ?>" onclick="toggleSave(event, <?= $r['recipe_id'] ?>)">
-                            <i class="bi bi-heart<?= $r['is_saved'] > 0 ? '-fill' : '' ?> fs-5"></i>
-                        </button>
-                    </div>
-                </div>
-            </div>
-            <?php endforeach; ?>
+            <a href="modules/recipe/recipes.php" class="text-muted fw-bold text-decoration-none small hover-opacity">Browse All <i class="bi bi-arrow-right ms-1"></i></a>
         </div>
+    </div>
+
+    <?php foreach ($recipes as $r): 
+        $isSaved = ($r['is_saved'] > 0);
+        $activeClass = $isSaved ? 'active' : '';
+    ?>
+    <div class="recipe-item d-flex align-items-center gap-4" onclick="location.href='modules/recipe/recipedetail.php?id=<?= $r['recipe_id'] ?>'">
+        <div class="recipe-img-wrapper shadow-sm">
+            <?php $imgSrc = getImageSrc($r['image'], 'assets/images/recipes/'); ?>
+            <img src="<?= $imgSrc ? htmlspecialchars($imgSrc) : 'https://placehold.co/400x400' ?>" class="w-100 h-100 object-fit-cover">
+        </div>
+        
+        <div class="flex-grow-1 pe-2">
+            <div class="d-flex justify-content-between align-items-start">
+                <span class="cuisine-tag mb-2"><?= $r['cuisine'] ?></span>
+                <button class="save-btn-circle <?= $activeClass ?>" onclick="toggleSave(event, <?= $r['recipe_id'] ?>)">
+                    <i class="bi bi-heart<?= $isSaved ? '-fill' : '' ?> fs-6 text-danger"></i>
+                </button>
+            </div>
+            
+            <h5 class="mb-1"><?= htmlspecialchars($r['title']) ?></h5>
+            <p class="text-muted small mb-3" style="line-height: 1.5;">
+                <?= substr(htmlspecialchars($r['description']), 0, 85) ?>...
+            </p>
+            
+            <div class="d-flex align-items-center gap-3">
+                <span class="btn-view-details">
+                    View Recipe <i class="bi bi-chevron-right" style="font-size: 0.7rem;"></i>
+                </span>
+            </div>
+        </div>
+    </div>
+    <?php endforeach; ?>
+</div>
 
         <!-- MARKETPLACE -->
        <!-- MARKETPLACE -->
