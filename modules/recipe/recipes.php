@@ -346,7 +346,7 @@ $icons = [
         <li><a href="../shop/items.php"><i class="bi bi-bag-heart"></i> Market</a></li>
         <?php if ($isLoggedIn): ?>
             <li><a href="cookbook.php"><i class="bi bi-journal-text"></i> My Cookbook</a></li>
-            <li><a href="../order/order.php"><i class="bi bi-receipt"></i> Orders</a></li>
+            <li><a href="../order/my_orders.php"><i class="bi bi-receipt"></i> Orders</a></li>
         <?php endif; ?>
     </ul>
 

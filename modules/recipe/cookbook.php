@@ -261,7 +261,7 @@ $icons = [
         <li><a href="recipes.php"><i class="bi bi-book"></i> Recipes</a></li>
         <li><a href="../shop/items.php"><i class="bi bi-bag-heart"></i> Market</a></li>
         <li><a href="cookbook.php" class="active"><i class="bi bi-journal-text"></i> My Cookbook</a></li>
-        <li><a href="../order/index.php"><i class="bi bi-receipt"></i> Orders</a></li>
+        <li><a href="../order/my_orders.php"><i class="bi bi-receipt"></i> Orders</a></li>
     </ul>
 
     <div class="sidebar-footer">

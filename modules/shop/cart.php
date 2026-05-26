@@ -347,7 +347,7 @@ $catColors = [
                         </div>
                         <div class="summary-row">
                             <span>Delivery</span>
-                            <span>RM 5.00</span>
+                            <span>RM 3.50</span>
                         </div>
 
                         <hr class="summary-divider">
@@ -422,7 +422,7 @@ function recalcTotal() {
         totalQty += qty;
     });
     document.getElementById('subtotalVal').textContent = 'RM ' + sub.toFixed(2);
-    document.getElementById('totalVal').textContent    = 'RM ' + (sub + 5).toFixed(2);
+    document.getElementById('totalVal').textContent    = 'RM ' + (sub + 3.50).toFixed(2);
     document.getElementById('itemCount').textContent   = totalQty;
     document.getElementById('headerCount').textContent = totalQty + ' item' + (totalQty !== 1 ? 's' : '') + ' in your cart';
 }

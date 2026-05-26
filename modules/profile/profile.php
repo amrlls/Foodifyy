@@ -275,7 +275,7 @@ $profileSrc = getImageSrc($user['profile_image'], '../../assets/images/profiles/
         <li><a href="../recipe/recipes.php"><i class="bi bi-book"></i> Recipes</a></li>
         <li><a href="../shop/index.php"><i class="bi bi-bag-heart"></i> Market</a></li>
         <li><a href="../recipe/cookbook.php"><i class="bi bi-journal-text"></i> My Cookbook</a></li>
-        <li><a href="../order/index.php"><i class="bi bi-receipt"></i> Orders</a></li>
+        <li><a href="../order/my_orders.php"><i class="bi bi-receipt"></i> Orders</a></li>
     </ul>
     <div class="sidebar-footer">
         <a href="profile.php" class="text-decoration-none d-block">
