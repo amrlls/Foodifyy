@@ -34,10 +34,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $_SESSION['role']     = $role;
 
                 // Redirect based on role
-                if ($role === 'admin' || $role === 'staff') {
-                    header("Location: ../../admin/dashboard.php");
+                if ($role === 'admin') {
+                    header("Location: ../admin/dashboard.php");
+                } elseif ($role === 'staff') {
+                    header("Location: ../staff/dashboard.php");
                 } else {
-                    header("Location: ../../index.php");
+                    header("Location: ../index.php");
                 }
                 exit();
             }
