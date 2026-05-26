@@ -174,16 +174,34 @@ if ($isLoggedIn) {
         .save-btn-circle.active i { color: #FF6B6B; }
 
         .grocery-card {
-            background: white; border-radius: 24px; border: none;
-            padding: 1.5rem; transition: 0.3s; height: 100%;
-            display: flex; flex-direction: column; justify-content: space-between;
-            box-shadow: 0 4px 10px rgba(0,0,0,0.02);
+            background: white; border-radius: 20px; border: none;
+            overflow: hidden; transition: 0.3s; height: 100%;
+            display: flex; flex-direction: column;
+            box-shadow: 0 2px 12px rgba(0,0,0,0.04);
+            cursor: pointer;
         }
-        .grocery-card:hover { box-shadow: 0 15px 30px rgba(0,0,0,0.08); }
+        .grocery-card:hover { box-shadow: 0 16px 36px rgba(0,0,0,0.1); transform: translateY(-4px); }
+        .grocery-card:hover .product-img-wrapper img { transform: scale(1.06); }
+        .grocery-card-img {
+            position: relative; height: 130px; overflow: hidden;
+        }
+        .grocery-card-img img {
+            width: 100%; height: 100%; object-fit: cover; transition: 0.5s ease;
+        }
+        .grocery-card-body {
+            padding: 0.9rem 1rem 1rem;
+            display: flex; flex-direction: column; flex-grow: 1;
+        }
+        .grocery-price {
+            font-size: 1rem; font-weight: 800;
+            background: var(--primary-grad); background-clip: text;
+            -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+        }
         .btn-cart-minimal {
-            background: #F8F9FA; color: #2D3436; border: none;
-            padding: 10px; border-radius: 12px; font-weight: 600;
-            width: 100%; transition: 0.3s; font-family: 'Plus Jakarta Sans', sans-serif;
+            background: #f8f9fa; color: #2D3436; border: none;
+            padding: 9px; border-radius: 10px; font-weight: 700; font-size: 0.82rem;
+            width: 100%; transition: 0.25s; font-family: 'Plus Jakarta Sans', sans-serif;
+            margin-top: auto;
         }
         .btn-cart-minimal:hover { background: var(--sidebar-dark); color: white; }
         .btn-cart-minimal:disabled { opacity: 0.7; cursor: not-allowed; }
@@ -296,41 +314,39 @@ if ($isLoggedIn) {
         <!-- MARKETPLACE -->
         <div class="col-lg-5">
             <div class="section-header-box">
-                <h3 class="fw-bold m-0">Looking for Groceries?</h3>
+                <div class="d-flex justify-content-between align-items-end w-100">
+                    <div>
+                        <h6 class="text-danger fw-bold text-uppercase small" style="font-size:0.7rem;margin-bottom:4px;">Fresh Picks</h6>
+                        <h3 class="fw-bold m-0">Looking for Groceries?</h3>
+                    </div>
+                    <a href="modules/shop/items.php" class="text-muted fw-bold text-decoration-none small">See All <i class="bi bi-arrow-right ms-1"></i></a>
+                </div>
             </div>
             <div class="row g-3">
                 <?php foreach ($items as $item): ?>
                 <div class="col-sm-6">
                     <div class="grocery-card shadow-sm">
-                        <div>
-                            <div class="product-img-wrapper mb-3" style="height:120px;overflow:hidden;border-radius:15px;">
-                                <?php $productImg = getImageSrc($item['image'], 'assets/images/items/'); ?>
-                                <img src="<?= $productImg ? htmlspecialchars($productImg) : 'https://placehold.co/400x300?text=No+Image' ?>" 
-                                     class="w-100 h-100 object-fit-cover" 
-                                     alt="<?= htmlspecialchars($item['name']) ?>">
-                            </div>
-                            <div class="d-flex justify-content-between align-items-start mb-2">
-                                <div class="p-2 rounded-3 bg-light text-danger" style="line-height:1;">
-                                    <?php 
-                                        $icon = "bi-basket";
-                                        if (stripos($item['name'], 'chicken') !== false) $icon = "bi-tencent-qq";
-                                        if (stripos($item['name'], 'egg') !== false)     $icon = "bi-egg-fried";
-                                        if (stripos($item['name'], 'veg') !== false)     $icon = "bi-leaf";
-                                    ?>
-                                    <i class="bi <?= $icon ?> fs-5"></i>
-                                </div>
-                                <span class="fw-bold text-dark small">RM <?= number_format($item['price'], 2) ?></span>
-                            </div>
-                            <h6 class="fw-bold text-truncate" title="<?= htmlspecialchars($item['name']) ?>">
+                        <!-- Image -->
+                        <div class="grocery-card-img">
+                            <?php $productImg = getImageSrc($item['image'], 'assets/images/items/'); ?>
+                            <img src="<?= $productImg ? htmlspecialchars($productImg) : 'https://placehold.co/400x300?text=No+Image' ?>"
+                                 alt="<?= htmlspecialchars($item['name']) ?>">
+                        </div>
+                        <!-- Body -->
+                        <div class="grocery-card-body">
+                            <h6 class="fw-bold mb-1 text-truncate" style="font-size:0.88rem;" title="<?= htmlspecialchars($item['name']) ?>">
                                 <?= htmlspecialchars($item['name']) ?>
                             </h6>
-                            <?php if (!empty($item['unit'])): ?>
-                                <p class="text-muted small mb-0" style="font-size:0.7rem;">Per <?= htmlspecialchars($item['unit']) ?></p>
-                            <?php endif; ?>
+                            <div class="d-flex justify-content-between align-items-center mb-2">
+                                <span class="grocery-price">RM <?= number_format($item['price'], 2) ?></span>
+                                <?php if (!empty($item['unit'])): ?>
+                                    <span class="text-muted" style="font-size:0.7rem;font-weight:600;">per <?= htmlspecialchars($item['unit']) ?></span>
+                                <?php endif; ?>
+                            </div>
+                            <button onclick="addToCart(event, <?= $item['item_id'] ?>, this)" class="btn-cart-minimal">
+                                <i class="bi bi-plus-lg me-1"></i> Add
+                            </button>
                         </div>
-                        <button onclick="addToCart(event, <?= $item['item_id'] ?>, this)" class="btn-cart-minimal mt-2">
-                            <i class="bi bi-plus-lg me-1"></i> Add
-                        </button>
                     </div>
                 </div>
                 <?php endforeach; ?>
