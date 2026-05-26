@@ -347,7 +347,7 @@ $catColors = [
                         </div>
                         <div class="summary-row">
                             <span>Delivery</span>
-                            <span>RM 5.00</span>
+                            <span>RM 3.50</span>
                         </div>
 
                         <hr class="summary-divider">
