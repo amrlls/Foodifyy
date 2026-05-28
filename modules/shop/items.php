@@ -339,10 +339,11 @@ $categories = $cat_result->fetch_all(MYSQLI_ASSOC);
             box-shadow: 0 16px 40px rgba(0,0,0,0.25);
         }
         .floating-cart .cart-count {
-            background: var(--primary-grad);
-            color: white; font-size: 0.7rem; font-weight: 800;
-            width: 22px; height: 22px; border-radius: 50%;
-            display: inline-flex; align-items: center; justify-content: center;
+        background: var(--primary-grad);
+        color: white; font-size: 0.65rem; font-weight: 800;
+        width: 20px; height: 20px; border-radius: 50%;
+        display: inline-flex; align-items: center; justify-content: center;
+        margin-left: 4px;
         }
 
         /* ── MODAL ── */

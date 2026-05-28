@@ -354,7 +354,7 @@ $catColors = [
 
                         <div class="summary-row summary-total">
                             <span>Total</span>
-                            <span id="totalVal">RM <?= number_format($subtotal + 5, 2) ?></span>
+                            <span id="totalVal">RM <?= number_format($subtotal + 3.50, 2) ?></span>
                         </div>
 
                         <button class="btn-checkout" onclick="window.location.href='checkout.php'">
