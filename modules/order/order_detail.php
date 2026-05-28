@@ -379,7 +379,7 @@ $isPendingOnline = ($order['status'] === 'pending' && $order['method'] === 'onli
                     <div class="detail-row">
                         <span class="label">Status</span>
                         <span class="value">
-                            <?php if ($order['pay_status'] === 'success'): ?>
+                            <?php if ($order['pay_status'] === 'success' || ($order['method'] === 'cod' && $order['status'] === 'completed')): ?>
                                 <span style="color:#00b894;font-weight:800;">Paid</span>
                             <?php elseif ($order['pay_status'] === 'failed'): ?>
                                 <span style="color:#e17055;font-weight:800;">Failed</span>
