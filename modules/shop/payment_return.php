@@ -166,7 +166,7 @@ if ($status === 'cod') {
             display: flex; align-items: center; justify-content: center; gap: 8px;
             margin-bottom: 0.8rem;
         }
-        .btn-primary-custom:hover { opacity: 0.88; transform: translateY(-2px); color: white; }
+        .btn-primary-custom:hover { opacity: 0.88; transform: translateY(-3px); color: white; box-shadow: 0 14px 28px rgba(255,107,107,0.35); }
 
         .btn-outline-custom {
             width: 100%; padding: 12px; border: 1.5px solid #eee; border-radius: 16px;
@@ -175,7 +175,7 @@ if ($status === 'cod') {
             cursor: pointer; transition: 0.3s; text-decoration: none;
             display: flex; align-items: center; justify-content: center; gap: 8px;
         }
-        .btn-outline-custom:hover { border-color: #1A1C1E; color: #1A1C1E; }
+        .btn-outline-custom:hover { background: #1A1C1E; border-color: #1A1C1E; color: white; transform: translateY(-2px); }
 
         /* Failed actions */
         .failed-note {
