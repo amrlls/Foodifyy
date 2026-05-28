@@ -3,7 +3,6 @@ session_start();
 require_once __DIR__ . '/../../config/database.php';
 require_once __DIR__ . '/../../config/upload_helper.php';
 
-// Check login
 if (!isset($_SESSION['user_id'])) {
     header("Location: ../auth/login.php");
     exit();
@@ -12,7 +11,6 @@ if (!isset($_SESSION['user_id'])) {
 $userId = $_SESSION['user_id'];
 $status = $_GET['status'] ?? "";
 
-// 1. Retrieve all User Information
 $stmt = $conn->prepare("SELECT * FROM users WHERE user_id = ?");
 $stmt->bind_param("i", $userId);
 $stmt->execute();
@@ -21,12 +19,11 @@ $user = $stmt->get_result()->fetch_assoc();
 $username = $user['username'] ?? 'Guest';
 $nav_role = $user['role'] ?? 'Customer';
 
-// 2. Logic: Update Profile
 if (isset($_POST['update_profile'])) {
     $fullname    = $_POST['fullname'];
     $email       = $_POST['email'];
     $phone       = $_POST['phone'];
-    $address     = $_POST['address']; 
+    $address     = $_POST['address'];
     $profile_img = $user['profile_image'];
 
     if (isset($_FILES['profile_pic']) && $_FILES['profile_pic']['error'] == 0) {
@@ -35,7 +32,7 @@ if (isset($_POST['update_profile'])) {
 
         if ($new_image_url) {
             $profile_img = $new_image_url;
-            }else {
+        } else {
             $target_dir = "../../assets/images/profiles/";
             if (!file_exists($target_dir)) { mkdir($target_dir, 0777, true); }
             $file_ext = pathinfo($_FILES["profile_pic"]["name"], PATHINFO_EXTENSION);
@@ -52,7 +49,6 @@ if (isset($_POST['update_profile'])) {
 
     $update = $conn->prepare("UPDATE users SET username = ?, email = ?, phone = ?, address = ?, profile_image = ? WHERE user_id = ?");
     $update->bind_param("sssssi", $fullname, $email, $phone, $address, $profile_img, $userId);
-    
     if ($update->execute()) {
         $_SESSION['username'] = $fullname;
         header("Refresh:0; url=profile.php?status=profile_success");
@@ -60,7 +56,6 @@ if (isset($_POST['update_profile'])) {
     }
 }
 
-// 3. Logic: Update Password
 if (isset($_POST['update_password'])) {
     $current_pwd = $_POST['current_password'];
     $new_pwd     = $_POST['new_password'];
@@ -101,7 +96,6 @@ $profileSrc = getImageSrc($user['profile_image'], '../../assets/images/profiles/
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
     <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;600;800&family=Playfair+Display:wght@700;900&display=swap" rel="stylesheet">
-    
     <style>
         :root {
             --primary-grad: linear-gradient(135deg, #FF6B6B 0%, #FF8E53 100%);
@@ -110,15 +104,8 @@ $profileSrc = getImageSrc($user['profile_image'], '../../assets/images/profiles/
             --soft-bg: #F8F9FA;
             --sidebar-w: 280px;
         }
+        body { font-family: 'Plus Jakarta Sans', sans-serif; background-color: var(--soft-bg); color: #2D3436; overflow-x: hidden; }
 
-        body { 
-            font-family: 'Plus Jakarta Sans', sans-serif; 
-            background-color: var(--soft-bg);
-            color: #2D3436;
-            overflow-x: hidden;
-        }
-
-        /* ── SIDEBAR ── */
         .sidebar {
             position: fixed; left: 0; top: 0; width: var(--sidebar-w); height: 100vh;
             background: var(--sidebar-dark); color: white;
@@ -126,8 +113,8 @@ $profileSrc = getImageSrc($user['profile_image'], '../../assets/images/profiles/
             display: flex; flex-direction: column;
             border-right: 1px solid rgba(255,255,255,0.05);
         }
-        .sidebar-logo h2 { 
-            font-family: 'Playfair Display', serif; font-weight: 900; 
+        .sidebar-logo h2 {
+            font-family: 'Playfair Display', serif; font-weight: 900;
             letter-spacing: -1px;
             background: var(--primary-grad); background-clip: text; -webkit-background-clip: text; -webkit-text-fill-color: transparent;
             margin-bottom: 0.5rem; padding-left: 1rem;
@@ -145,54 +132,45 @@ $profileSrc = getImageSrc($user['profile_image'], '../../assets/images/profiles/
         .sidebar-nav a.active { background: var(--primary-grad); color: white; box-shadow: 0 10px 20px rgba(255,107,107,0.25); }
         .sidebar-footer { padding-top: 2rem; border-top: 1px solid rgba(255,255,255,0.1); }
         .user-card {
-            background: rgba(255,255,255,0.03);
-            border: 1px solid rgba(255,255,255,0.08);
-            padding: 15px; border-radius: 20px;
-            transition: all 0.2s ease; cursor: pointer;
+            background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.08);
+            padding: 15px; border-radius: 20px; transition: all 0.2s ease; cursor: pointer;
         }
         .user-card:hover { background: rgba(255,255,255,0.07); transform: translateY(-2px); }
         .user-card:active { transform: scale(0.95); background: rgba(255,255,255,0.1); }
         .user-card img { transition: transform 0.3s ease; }
         .user-card:hover img { transform: rotate(5deg); }
 
-        /* ── MAIN CONTENT ── */
         .main-content { margin-left: var(--sidebar-w); padding: 3rem; }
         .profile-card {
             background: white; border-radius: 32px; padding: 2.5rem;
             border: 1px solid rgba(0,0,0,0.05);
             box-shadow: 0 10px 30px rgba(0,0,0,0.02); height: 100%;
         }
-        .top-bar-flex {
-            display: flex;
-            justify-content: space-between;
-            align-items: flex-end;
-            margin-bottom: 1.0rem;
-        }
-
-        .top-bar h1 {
-            font-family: 'Playfair Display', serif;
-            font-size: 3.5rem; font-weight: 900;
-            color: #1A1C1E; line-height: 1; margin: 0;
-        }
+        .top-bar { margin-bottom: 2rem; }
+        .top-bar h1 { font-family: 'Playfair Display', serif; font-size: 3.5rem; font-weight: 900; color: #1A1C1E; line-height: 1; margin: 0; }
         .top-bar p { color: #7f8c8d; font-size: 1.1rem; margin-top: 0.8rem; }
+
         .profile-img-preview-wrapper { position: relative; width: 140px; height: 140px; margin: 0 auto 2.5rem; }
-        .profile-img-preview {
-            width: 100%; height: 100%; border-radius: 40px; object-fit: cover;
-            border: 5px solid #fff; box-shadow: 0 15px 35px rgba(0,0,0,0.1);
-        }
-        .form-label {
-            font-weight: 800; color: #1A1C1E; font-size: 0.85rem;
-            text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 0.8rem;
-        }
+        .profile-img-preview { width: 100%; height: 100%; border-radius: 40px; object-fit: cover; border: 5px solid #fff; box-shadow: 0 15px 35px rgba(0,0,0,0.1); }
+
+        .form-label { font-weight: 800; color: #1A1C1E; font-size: 0.85rem; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 0.8rem; }
         .form-control {
             border-radius: 18px; padding: 14px 20px;
             background: #F8F9FA; border: 1px solid #EDEDED;
             font-weight: 500; transition: 0.3s;
         }
-        .form-control:focus {
-            background: white; border-color: var(--accent);
-            box-shadow: 0 0 0 4px rgba(255, 142, 83, 0.1);
+        .form-control:focus { background: white; border-color: var(--accent); box-shadow: 0 0 0 4px rgba(255,142,83,0.1); }
+
+        /* Eye toggle button */
+        .pwd-toggle {
+            position: absolute; top: 50%; right: 14px;
+            transform: translateY(-50%);
+            background: none; border: none; cursor: pointer;
+            color: #bdc3c7; font-size: 1rem; padding: 4px;
+            transition: color 0.2s; z-index: 5;
         }
+        .pwd-toggle:hover { color: var(--accent); }
+
         .btn-update-main {
             background: var(--primary-grad); color: white; border: none;
             border-radius: 20px; padding: 18px; font-weight: 800; width: 100%;
@@ -211,85 +189,60 @@ $profileSrc = getImageSrc($user['profile_image'], '../../assets/images/profiles/
             font-weight: 700; font-size: 0.75rem; margin-bottom: 1.5rem;
         }
 
-        /* UNIFIED MODAL SYSTEM */
         .modal-overlay {
-            position: fixed; inset: 0;
-            background: rgba(0,0,0,0.6);
-            backdrop-filter: blur(8px);
-            z-index: 10000;
-            display: none;
-            align-items: center;
-            justify-content: center;
+            position: fixed; inset: 0; background: rgba(0,0,0,0.6);
+            backdrop-filter: blur(8px); z-index: 10000;
+            display: none; align-items: center; justify-content: center;
         }
         .modal-overlay.active { display: flex; }
-
         .confirm-box {
-            background: white;
-            padding: 3rem;
-            border-radius: 40px;
-            width: 90%;
-            max-width: 450px;
-            text-align: center;
+            background: white; padding: 3rem; border-radius: 40px;
+            width: 90%; max-width: 450px; text-align: center;
             box-shadow: 0 20px 60px rgba(0,0,0,0.2);
             animation: popupFade 0.25s ease;
         }
-        @keyframes popupFade {
-            from { opacity: 0; transform: scale(0.9) translateY(10px); }
-            to   { opacity: 1; transform: scale(1) translateY(0); }
-        }
-
-        /* icon circle */
-        .modal-icon-circle {
-            width: 80px; height: 80px; border-radius: 50%;
-            display: flex; align-items: center; justify-content: center;
-            margin: 0 auto;
-        }
-        .modal-icon-circle.orange { background: #FFF0EB; }
-        .modal-icon-circle.red    { background: #FFEAEA; }
-
-        /* modal buttons */
+        @keyframes popupFade { from { opacity:0; transform:scale(0.9) translateY(10px); } to { opacity:1; transform:scale(1) translateY(0); } }
+        .modal-icon-circle { width:80px; height:80px; border-radius:50%; display:flex; align-items:center; justify-content:center; margin:0 auto; }
+        .modal-icon-circle.orange { background:#FFF0EB; }
+        .modal-icon-circle.red    { background:#FFEAEA; }
         .btn-modal-primary {
-            background: linear-gradient(135deg, #FF6B6B 0%, #FF8E53 100%);
-            color: white; border: none; border-radius: 50px;
-            padding: 14px 0; font-weight: 800; width: 100%;
-            font-size: 0.95rem; transition: 0.3s; cursor: pointer;
+            background: linear-gradient(135deg,#FF6B6B 0%,#FF8E53 100%);
+            color:white; border:none; border-radius:50px; padding:14px 0;
+            font-weight:800; width:100%; font-size:0.95rem; transition:0.3s; cursor:pointer;
         }
-        .btn-modal-primary:hover { opacity: 0.9; transform: translateY(-2px); }
+        .btn-modal-primary:hover { opacity:0.9; transform:translateY(-2px); }
         .btn-modal-cancel {
-            background: #F1F3F5; color: #2D3436; border: none;
-            border-radius: 50px; padding: 14px 0;
-            font-weight: 700; width: 100%;
-            font-size: 0.95rem; transition: 0.3s; cursor: pointer;
+            background:#F1F3F5; color:#2D3436; border:none; border-radius:50px;
+            padding:14px 0; font-weight:700; width:100%; font-size:0.95rem; transition:0.3s; cursor:pointer;
         }
-        .btn-modal-cancel:hover { background: #E2E5E9; }
+        .btn-modal-cancel:hover { background:#E2E5E9; }
     </style>
 </head>
 <body>
 
-<!-- SIDEBAR  -->
 <div class="sidebar">
     <div class="sidebar-logo"><h2>foodify.</h2></div>
     <div class="sidebar-greet-box"><p>Manage your account</p></div>
     <ul class="sidebar-nav">
         <li><a href="../../index.php"><i class="bi bi-house-door"></i> Home</a></li>
         <li><a href="../recipe/recipes.php"><i class="bi bi-book"></i> Recipes</a></li>
-        <li><a href="../shop/index.php"><i class="bi bi-bag-heart"></i> Market</a></li>
+        <li><a href="../shop/items.php"><i class="bi bi-bag-heart"></i> Market</a></li>
         <li><a href="../recipe/cookbook.php"><i class="bi bi-journal-text"></i> My Cookbook</a></li>
         <li><a href="../order/my_orders.php"><i class="bi bi-receipt"></i> Orders</a></li>
     </ul>
     <div class="sidebar-footer">
         <a href="profile.php" class="text-decoration-none d-block">
-            <div class="user-card d-flex align-items-center gap-3 mb-3" style="border: 1px solid var(--accent);">
+            <div class="user-card d-flex align-items-center gap-3 mb-3" style="border:1px solid var(--accent);">
                 <?php if ($profileSrc): ?>
-                    <img src="<?= htmlspecialchars($profileSrc) ?>" style="width:42px; height:42px; border-radius:12px; object-fit:cover;">
+                    <img src="<?= htmlspecialchars($profileSrc) ?>" style="width:42px;height:42px;border-radius:12px;object-fit:cover;">
                 <?php else: ?>
-                    <div class="text-white rounded-3 p-2 d-flex justify-content-center align-items-center" style="width:42px; height:42px; background: var(--primary-grad);">
+                    <div class="text-white rounded-3 p-2 d-flex justify-content-center align-items-center" style="width:42px;height:42px;background:var(--primary-grad);">
                         <i class="bi bi-person-fill"></i>
                     </div>
                 <?php endif; ?>
                 <div class="overflow-hidden">
                     <div class="text-white fw-bold small text-truncate" style="max-width:130px;"><?= htmlspecialchars($username) ?></div>
-                    <div style="font-size:0.65rem; color:var(--accent); font-weight:600; text-transform:uppercase; letter-spacing:0.5px;"><?= htmlspecialchars($nav_role ?? 'Customer') ?></div>
+                    <div style="font-size:0.65rem;color:var(--accent);font-weight:600;text-transform:uppercase;letter-spacing:0.5px;"><?= htmlspecialchars($nav_role ?? 'Customer') ?></div>
                 </div>
             </div>
         </a>
@@ -299,11 +252,10 @@ $profileSrc = getImageSrc($user['profile_image'], '../../assets/images/profiles/
     </div>
 </div>
 
-<!-- MAIN CONTENT-->
 <div class="main-content">
     <div class="top-bar">
-    <h1>Account Settings</h1>
-    <p>Manage your digital kitchen profile and security.</p>
+        <h1>Account Settings</h1>
+        <p>Manage your digital kitchen profile and security.</p>
     </div>
 
     <div class="row g-5">
@@ -355,22 +307,37 @@ $profileSrc = getImageSrc($user['profile_image'], '../../assets/images/profiles/
         <!-- PASSWORD FORM -->
         <div class="col-lg-5">
             <div class="profile-card">
-                <div class="info-pill" style="background:#E8F0FF; color:#357BFF;">
+                <div class="info-pill" style="background:#E8F0FF;color:#357BFF;">
                     <i class="bi bi-shield-lock"></i> Security & Privacy
                 </div>
                 <form method="POST" id="pwdForm">
                     <div class="mb-4">
                         <label class="form-label">Current Password</label>
-                        <input type="password" name="current_password" id="current_password" class="form-control" placeholder="" required>
+                        <div class="position-relative">
+                            <input type="password" name="current_password" id="current_password" class="form-control pe-5" placeholder="" required>
+                            <button type="button" onclick="togglePwd('current_password', this)" class="pwd-toggle">
+                                <i class="bi bi-eye"></i>
+                            </button>
+                        </div>
                     </div>
                     <hr class="my-4 opacity-50">
                     <div class="mb-4">
                         <label class="form-label">New Password</label>
-                        <input type="password" name="new_password" id="new_password" class="form-control" placeholder="Min. 8 characters" required>
+                        <div class="position-relative">
+                            <input type="password" name="new_password" id="new_password" class="form-control pe-5" placeholder="Min. 8 characters" required>
+                            <button type="button" onclick="togglePwd('new_password', this)" class="pwd-toggle">
+                                <i class="bi bi-eye"></i>
+                            </button>
+                        </div>
                     </div>
                     <div class="mb-4">
                         <label class="form-label">Confirm New Password</label>
-                        <input type="password" name="confirm_password" id="confirm_password" class="form-control" placeholder="" required>
+                        <div class="position-relative">
+                            <input type="password" name="confirm_password" id="confirm_password" class="form-control pe-5" placeholder="" required>
+                            <button type="button" onclick="togglePwd('confirm_password', this)" class="pwd-toggle">
+                                <i class="bi bi-eye"></i>
+                            </button>
+                        </div>
                     </div>
                     <button type="button" class="btn-password-alt" onclick="confirmPasswordUpdate()">
                         Update Password
@@ -383,13 +350,10 @@ $profileSrc = getImageSrc($user['profile_image'], '../../assets/images/profiles/
     </div>
 </div>
 
-
-<!-- MODAL 1 — PROFILE CONFIRM -->
+<!-- MODALS -->
 <div id="profileConfirmOverlay" class="modal-overlay">
     <div class="confirm-box">
-        <div class="mb-3">
-            <i class="bi bi-person-check-fill" style="font-size:4rem; color:#FF8E53;"></i>
-        </div>
+        <div class="mb-3"><i class="bi bi-person-check-fill" style="font-size:4rem;color:#FF8E53;"></i></div>
         <h3 class="fw-bold mb-2">Save Profile Changes?</h3>
         <p class="text-muted">Your profile information will be updated instantly.</p>
         <div class="d-flex gap-3 mt-4">
@@ -399,28 +363,18 @@ $profileSrc = getImageSrc($user['profile_image'], '../../assets/images/profiles/
     </div>
 </div>
 
-<!-- MODAL 2 — PROFILE SUCCESS -->
 <div id="profileSuccessOverlay" class="modal-overlay <?= (isset($_GET['status']) && $_GET['status'] == 'profile_success') ? 'active' : '' ?>">
     <div class="confirm-box">
-        <div class="mb-3">
-            <div class="modal-icon-circle orange">
-                <i class="bi bi-check-lg" style="font-size:2.5rem; color:#FF6B6B;"></i>
-            </div>
-        </div>
+        <div class="mb-3"><div class="modal-icon-circle orange"><i class="bi bi-check-lg" style="font-size:2.5rem;color:#FF6B6B;"></i></div></div>
         <h3 class="fw-bold mb-2">Profile Updated!</h3>
         <p class="text-muted">Your profile has been updated perfectly.</p>
-        <div class="mt-4">
-            <button class="btn-modal-primary" onclick="closeProfileSuccess()">Ok</button>
-        </div>
+        <div class="mt-4"><button class="btn-modal-primary" onclick="closeProfileSuccess()">Ok</button></div>
     </div>
 </div>
 
-<!-- MODAL 3 — PASSWORD CONFIRM -->
 <div id="pwdConfirmOverlay" class="modal-overlay">
     <div class="confirm-box">
-        <div class="mb-3">
-            <i class="bi bi-shield-lock-fill" style="font-size:4rem; color:#FF8E53;"></i>
-        </div>
+        <div class="mb-3"><i class="bi bi-shield-lock-fill" style="font-size:4rem;color:#FF8E53;"></i></div>
         <h3 class="fw-bold mb-2">Update Password?</h3>
         <p class="text-muted">You will need to use your new password the next time you log in.</p>
         <div class="d-flex gap-3 mt-4">
@@ -430,153 +384,107 @@ $profileSrc = getImageSrc($user['profile_image'], '../../assets/images/profiles/
     </div>
 </div>
 
-<!-- MODAL 4 — PASSWORD SUCCESS -->
 <div id="pwdSuccessOverlay" class="modal-overlay <?= ($status == 'password_success') ? 'active' : '' ?>">
     <div class="confirm-box">
-        <div class="mb-3">
-            <div class="modal-icon-circle orange">
-                <i class="bi bi-check-lg" style="font-size:2.5rem; color:#FF6B6B;"></i>
-            </div>
-        </div>
+        <div class="mb-3"><div class="modal-icon-circle orange"><i class="bi bi-check-lg" style="font-size:2.5rem;color:#FF6B6B;"></i></div></div>
         <h3 class="fw-bold mb-2">Security Updated!</h3>
         <p class="text-muted">Your new password has been saved successfully.</p>
-        <div class="mt-4">
-            <button class="btn-modal-primary" onclick="closeModal('pwdSuccessOverlay')">Ok</button>
-        </div>
+        <div class="mt-4"><button class="btn-modal-primary" onclick="closeModal('pwdSuccessOverlay')">Ok</button></div>
     </div>
 </div>
 
-<!-- MODAL 5 — ERROR: FIELD KOSONG (client-side) -->
 <div id="errIncompleteOverlay" class="modal-overlay">
     <div class="confirm-box">
-        <div class="mb-3">
-            <div class="modal-icon-circle red">
-                <i class="bi bi-exclamation-lg" style="font-size:2.5rem; color:#FF4D4D;"></i>
-            </div>
-        </div>
+        <div class="mb-3"><div class="modal-icon-circle red"><i class="bi bi-exclamation-lg" style="font-size:2.5rem;color:#FF4D4D;"></i></div></div>
         <h3 class="fw-bold mb-2">Incomplete</h3>
         <p class="text-muted">Please fill in all password fields before continuing.</p>
-        <div class="mt-4">
-            <button class="btn-modal-primary" onclick="closeModal('errIncompleteOverlay')">Got It</button>
-        </div>
+        <div class="mt-4"><button class="btn-modal-primary" onclick="closeModal('errIncompleteOverlay')">Got It</button></div>
     </div>
 </div>
 
-<!-- MODAL 6 — ERROR: PASSWORD TERLALU PENDEK (client-side)-->
 <div id="errShortOverlay" class="modal-overlay">
     <div class="confirm-box">
-        <div class="mb-3">
-            <div class="modal-icon-circle red">
-                <i class="bi bi-key-fill" style="font-size:2.5rem; color:#FF4D4D;"></i>
-            </div>
-        </div>
+        <div class="mb-3"><div class="modal-icon-circle red"><i class="bi bi-key-fill" style="font-size:2.5rem;color:#FF4D4D;"></i></div></div>
         <h3 class="fw-bold mb-2">Too Short</h3>
         <p class="text-muted">New password must be at least 8 characters long.</p>
-        <div class="mt-4">
-            <button class="btn-modal-primary" onclick="closeModal('errShortOverlay')">Got It</button>
-        </div>
+        <div class="mt-4"><button class="btn-modal-primary" onclick="closeModal('errShortOverlay')">Got It</button></div>
     </div>
 </div>
 
-<!-- MODAL 7 — ERROR: PASSWORD TAK SAMA (client + server) -->
 <div id="errMismatchOverlay" class="modal-overlay <?= ($status == 'password_mismatch') ? 'active' : '' ?>">
     <div class="confirm-box">
-        <div class="mb-3">
-            <div class="modal-icon-circle red">
-                <i class="bi bi-shield-x" style="font-size:2.5rem; color:#FF4D4D;"></i>
-            </div>
-        </div>
+        <div class="mb-3"><div class="modal-icon-circle red"><i class="bi bi-shield-x" style="font-size:2.5rem;color:#FF4D4D;"></i></div></div>
         <h3 class="fw-bold mb-2">Passwords Don't Match</h3>
         <p class="text-muted">Your new password and confirmation password are not the same.</p>
-        <div class="mt-4">
-            <button class="btn-modal-primary" onclick="closeModal('errMismatchOverlay')">Try Again</button>
-        </div>
+        <div class="mt-4"><button class="btn-modal-primary" onclick="closeModal('errMismatchOverlay')">Try Again</button></div>
     </div>
 </div>
 
-<!-- MODAL 8 — ERROR: PASSWORD PENDEK (server fallback)-->
 <div id="errShortServerOverlay" class="modal-overlay <?= ($status == 'password_short') ? 'active' : '' ?>">
     <div class="confirm-box">
-        <div class="mb-3">
-            <div class="modal-icon-circle red">
-                <i class="bi bi-key-fill" style="font-size:2.5rem; color:#FF4D4D;"></i>
-            </div>
-        </div>
+        <div class="mb-3"><div class="modal-icon-circle red"><i class="bi bi-key-fill" style="font-size:2.5rem;color:#FF4D4D;"></i></div></div>
         <h3 class="fw-bold mb-2">Too Short</h3>
         <p class="text-muted">Password must be at least 8 characters long.</p>
-        <div class="mt-4">
-            <button class="btn-modal-primary" onclick="closeModal('errShortServerOverlay')">Got It</button>
-        </div>
+        <div class="mt-4"><button class="btn-modal-primary" onclick="closeModal('errShortServerOverlay')">Got It</button></div>
     </div>
 </div>
 
-<!-- MODAL 9 — ERROR: WRONG CURRENT PASSWORD  -->
 <div id="errWrongPwdOverlay" class="modal-overlay <?= ($status == 'current_pwd_wrong') ? 'active' : '' ?>">
     <div class="confirm-box">
-        <div class="mb-3">
-            <div class="modal-icon-circle red">
-                <i class="bi bi-lock-fill" style="font-size:2.5rem; color:#FF4D4D;"></i>
-            </div>
-        </div>
+        <div class="mb-3"><div class="modal-icon-circle red"><i class="bi bi-lock-fill" style="font-size:2.5rem;color:#FF4D4D;"></i></div></div>
         <h3 class="fw-bold mb-2">Wrong Password</h3>
         <p class="text-muted">Your current password is incorrect. Please try again.</p>
-        <div class="mt-4">
-            <button class="btn-modal-primary" onclick="closeModal('errWrongPwdOverlay')">Try Again</button>
-        </div>
+        <div class="mt-4"><button class="btn-modal-primary" onclick="closeModal('errWrongPwdOverlay')">Try Again</button></div>
     </div>
 </div>
 
-
 <script>
-    // ── IMAGE PREVIEW ──
-    function previewImage(input) {
-        if (input.files && input.files[0]) {
-            var reader = new FileReader();
-            reader.onload = function(e) {
-                document.getElementById('imgPreview').src = e.target.result;
-            }
-            reader.readAsDataURL(input.files[0]);
-        }
+function previewImage(input) {
+    if (input.files && input.files[0]) {
+        var reader = new FileReader();
+        reader.onload = function(e) { document.getElementById('imgPreview').src = e.target.result; }
+        reader.readAsDataURL(input.files[0]);
     }
+}
 
-    // ── GENERIC HELPERS ──
-    function openModal(id)  { document.getElementById(id).classList.add('active'); }
-    function closeModal(id) { document.getElementById(id).classList.remove('active'); }
+function openModal(id)  { document.getElementById(id).classList.add('active'); }
+function closeModal(id) { document.getElementById(id).classList.remove('active'); }
 
-    // ── PROFILE FLOW ──
-    function confirmUpdate()      { openModal('profileConfirmOverlay'); }
-    function submitProfileForm()  { document.getElementById('profileForm').submit(); }
-    function closeProfileSuccess() {
-        closeModal('profileSuccessOverlay');
-        const url = new URL(window.location);
-        url.searchParams.delete('status');
-        window.history.replaceState({}, document.title, url.pathname);
+function confirmUpdate()     { openModal('profileConfirmOverlay'); }
+function submitProfileForm() { document.getElementById('profileForm').submit(); }
+function closeProfileSuccess() {
+    closeModal('profileSuccessOverlay');
+    const url = new URL(window.location);
+    url.searchParams.delete('status');
+    window.history.replaceState({}, document.title, url.pathname);
+}
+
+function confirmPasswordUpdate() {
+    const current = document.getElementById('current_password').value.trim();
+    const newPwd  = document.getElementById('new_password').value.trim();
+    const confirm = document.getElementById('confirm_password').value.trim();
+    if (!current || !newPwd || !confirm) { openModal('errIncompleteOverlay'); return; }
+    if (newPwd.length < 8) { openModal('errShortOverlay'); return; }
+    if (newPwd !== confirm) { openModal('errMismatchOverlay'); return; }
+    openModal('pwdConfirmOverlay');
+}
+
+function submitPwdForm() {
+    closeModal('pwdConfirmOverlay');
+    document.getElementById('pwdForm').submit();
+}
+
+function togglePwd(id, btn) {
+    const input = document.getElementById(id);
+    const icon  = btn.querySelector('i');
+    if (input.type === 'password') {
+        input.type = 'text';
+        icon.classList.replace('bi-eye', 'bi-eye-slash');
+    } else {
+        input.type = 'password';
+        icon.classList.replace('bi-eye-slash', 'bi-eye');
     }
-
-    // ── PASSWORD FLOW ──
-    function confirmPasswordUpdate() {
-        const current = document.getElementById('current_password').value.trim();
-        const newPwd  = document.getElementById('new_password').value.trim();
-        const confirm = document.getElementById('confirm_password').value.trim();
-
-        if (!current || !newPwd || !confirm) {
-            openModal('errIncompleteOverlay'); return;
-        }
-        if (newPwd.length < 8) {
-            openModal('errShortOverlay'); return;
-        }
-        if (newPwd !== confirm) {
-            openModal('errMismatchOverlay'); return;
-        }
-
-        openModal('pwdConfirmOverlay');
-    }
-
-    function submitPwdForm() {
-        closeModal('pwdConfirmOverlay');
-        document.getElementById('pwdForm').submit();
-    }
-    
+}
 </script>
 </body>
 </html>
