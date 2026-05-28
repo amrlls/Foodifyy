@@ -1,6 +1,7 @@
 <?php
 session_start();
 require_once __DIR__ . '/../../config/database.php';
+require_once __DIR__ . '/../../config/upload_helper.php';
 
 if (!isset($_SESSION['user_id'])) {
     header('Location: ../auth/login.php');
@@ -8,32 +9,39 @@ if (!isset($_SESSION['user_id'])) {
 }
 
 $userId  = $_SESSION['user_id'];
-$orderId = intval($_GET['order_id'] ?? 0);
-$status  = $_GET['status'] ?? ''; // 'cod' atau dari ToyyibPay: status_id
+$orderId = intval($_GET['my_order_id'] ?? 0);
+$status  = $_GET['status'] ?? '';
 
 if (!$orderId) { header('Location: items.php'); exit; }
 
-// Verify order belongs to user
-$stmt = $conn->prepare("SELECT o.*, p.method, p.status as pay_status FROM orders o JOIN payments p ON p.order_id = o.order_id WHERE o.order_id = ? AND o.user_id = ?");
+// Nav info
+$nav_profile_img = "";
+$nav_role = "Customer";
+$username = 'Guest';
+$stmt_nav = $conn->prepare("SELECT username, profile_image, role FROM users WHERE user_id = ?");
+$stmt_nav->bind_param("i", $userId);
+$stmt_nav->execute();
+$user_nav = $stmt_nav->get_result()->fetch_assoc();
+if ($user_nav) {
+    $username        = $user_nav['username'];
+    $nav_profile_img = $user_nav['profile_image'];
+    $nav_role        = $user_nav['role'];
+}
+
+$stmt = $conn->prepare("SELECT o.*, p.method, p.status as pay_status, p.transaction_ref FROM orders o JOIN payments p ON p.order_id = o.order_id WHERE o.order_id = ? AND o.user_id = ?");
 $stmt->bind_param("ii", $orderId, $userId);
 $stmt->execute();
 $order = $stmt->get_result()->fetch_assoc();
 if (!$order) { header('Location: items.php'); exit; }
 
-// Determine payment result
 $isSuccess = false;
 
 if ($status === 'cod') {
-    // COD — terus success
     $isSuccess = true;
-    // Update order status
     $conn->query("UPDATE orders SET status = 'processing' WHERE order_id = $orderId");
-
 } elseif (isset($_GET['status_id'])) {
-    // ToyyibPay return — status_id: 1 = success, 2 = pending, 3 = fail
-    $statusId = intval($_GET['status_id']);
+    $statusId  = intval($_GET['status_id']);
     $isSuccess = ($statusId === 1);
-
     if ($isSuccess) {
         $ref = $_GET['billcode'] ?? '';
         $stmtUpd = $conn->prepare("UPDATE payments SET status = 'success', transaction_ref = ?, paid_at = NOW() WHERE order_id = ?");
@@ -44,7 +52,6 @@ if ($status === 'cod') {
         $conn->query("UPDATE payments SET status = 'failed' WHERE order_id = $orderId");
     }
 } else {
-    // Fallback — check DB status
     $isSuccess = ($order['pay_status'] === 'success' || $order['method'] === 'cod');
 }
 ?>
@@ -67,7 +74,6 @@ if ($status === 'cod') {
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body { font-family: 'Plus Jakarta Sans', sans-serif; background: #fdfdfd; color: #1A1C1E; }
 
-        /* Sidebar */
         .sidebar {
             position: fixed; left: 0; top: 0; width: var(--sidebar-w); height: 100vh;
             background: var(--sidebar-dark); color: white;
@@ -99,7 +105,6 @@ if ($status === 'cod') {
         }
         .user-card:hover { background: rgba(255,255,255,0.07); transform: translateY(-2px); }
 
-        /* Main */
         .main-content {
             margin-left: var(--sidebar-w); padding: 0; min-height: 100vh;
             display: flex; align-items: center; justify-content: center;
@@ -107,15 +112,12 @@ if ($status === 'cod') {
 
         .result-wrap { width: 100%; max-width: 520px; padding: 2rem; }
 
-        /* Success card */
         .result-card {
             background: white; border-radius: 28px; overflow: hidden;
             box-shadow: 0 20px 60px rgba(0,0,0,0.08);
         }
 
-        .result-banner {
-            padding: 2.5rem 2rem; text-align: center;
-        }
+        .result-banner { padding: 2.5rem 2rem; text-align: center; }
         .result-banner.success { background: linear-gradient(135deg,#00b894,#00cec9); }
         .result-banner.failed  { background: linear-gradient(135deg,#e17055,#d63031); }
 
@@ -133,11 +135,9 @@ if ($status === 'cod') {
 
         .result-body { padding: 2rem; }
 
-        /* Order details */
         .detail-row {
             display: flex; justify-content: space-between; align-items: center;
-            padding: 0.7rem 0; border-bottom: 1px solid #f5f5f5;
-            font-size: 0.88rem;
+            padding: 0.7rem 0; border-bottom: 1px solid #f5f5f5; font-size: 0.88rem;
         }
         .detail-row:last-of-type { border-bottom: none; }
         .detail-row .label { color: #7f8c8d; font-weight: 600; }
@@ -147,7 +147,6 @@ if ($status === 'cod') {
             -webkit-background-clip: text; -webkit-text-fill-color: transparent;
         }
 
-        /* Status badge */
         .status-badge {
             display: inline-flex; align-items: center; gap: 6px;
             padding: 5px 14px; border-radius: 100px;
@@ -156,7 +155,6 @@ if ($status === 'cod') {
         .status-badge.processing { background: rgba(253,203,110,0.15); color: #e17055; }
         .status-badge.pending    { background: rgba(116,185,255,0.15); color: #0984e3; }
 
-        /* Buttons */
         .btn-primary-custom {
             width: 100%; padding: 14px; border: none; border-radius: 16px;
             background: var(--primary-grad); color: white;
@@ -165,6 +163,7 @@ if ($status === 'cod') {
             cursor: pointer; transition: 0.3s; text-decoration: none;
             display: flex; align-items: center; justify-content: center; gap: 8px;
             margin-bottom: 0.8rem;
+            box-shadow: 0 8px 20px rgba(255,107,107,0.25);
         }
         .btn-primary-custom:hover { opacity: 0.88; transform: translateY(-3px); color: white; box-shadow: 0 14px 28px rgba(255,107,107,0.35); }
 
@@ -177,17 +176,16 @@ if ($status === 'cod') {
         }
         .btn-outline-custom:hover { background: #1A1C1E; border-color: #1A1C1E; color: white; transform: translateY(-2px); }
 
-        /* Failed actions */
         .failed-note {
             background: #fff5f3; border-radius: 14px; padding: 1rem 1.2rem;
             font-size: 0.82rem; color: #e17055; font-weight: 600;
             margin-bottom: 1.2rem; text-align: center;
+            border: 1px solid rgba(225,112,85,0.15);
         }
     </style>
 </head>
 <body>
 
-<!-- Sidebar -->
 <div class="sidebar">
     <div class="sidebar-logo"><h2>foodify.</h2></div>
     <div class="sidebar-greet-box"><p><?= $isSuccess ? 'Thank you! 🎉' : 'Something went wrong.' ?></p></div>
@@ -195,17 +193,23 @@ if ($status === 'cod') {
         <li><a href="../../index.php"><i class="bi bi-house-door-fill"></i> Home</a></li>
         <li><a href="../recipe/recipes.php"><i class="bi bi-book"></i> Recipes</a></li>
         <li><a href="items.php"><i class="bi bi-bag-heart"></i> Market</a></li>
+        <li><a href="../recipe/cookbook.php"><i class="bi bi-journal-text"></i> My Cookbook</a></li>
         <li><a href="../order/my_orders.php" class="active"><i class="bi bi-receipt"></i> Orders</a></li>
     </ul>
     <div class="sidebar-footer">
         <a href="../profile/profile.php" class="text-decoration-none d-block">
             <div class="user-card d-flex align-items-center gap-3 mb-3">
-                <div class="text-white rounded-3 p-2 d-flex justify-content-center align-items-center" style="width:42px;height:42px;background:var(--primary-grad);">
-                    <i class="bi bi-person-fill"></i>
-                </div>
+                <?php $navProfileSrc = getImageSrc($nav_profile_img, '../../assets/images/profiles/'); ?>
+                <?php if ($navProfileSrc): ?>
+                    <img src="<?= htmlspecialchars($navProfileSrc) ?>" style="width:42px;height:42px;border-radius:12px;object-fit:cover;">
+                <?php else: ?>
+                    <div class="text-white rounded-3 p-2 d-flex justify-content-center align-items-center" style="width:42px;height:42px;background:var(--primary-grad);">
+                        <i class="bi bi-person-fill"></i>
+                    </div>
+                <?php endif; ?>
                 <div class="overflow-hidden">
-                    <div class="text-white fw-bold small text-truncate" style="max-width:130px;">My Account</div>
-                    <div style="font-size:0.65rem;color:var(--accent);font-weight:600;text-transform:uppercase;">Customer</div>
+                    <div class="text-white fw-bold small text-truncate" style="max-width:130px;"><?= htmlspecialchars($username) ?></div>
+                    <div style="font-size:0.65rem;color:var(--accent);font-weight:600;text-transform:uppercase;letter-spacing:0.5px;"><?= htmlspecialchars($nav_role) ?></div>
                 </div>
             </div>
         </a>
@@ -215,12 +219,10 @@ if ($status === 'cod') {
     </div>
 </div>
 
-<!-- Main -->
 <div class="main-content">
     <div class="result-wrap">
         <div class="result-card">
 
-            <!-- Banner -->
             <div class="result-banner <?= $isSuccess ? 'success' : 'failed' ?>">
                 <div class="result-icon">
                     <i class="bi <?= $isSuccess ? 'bi-check-lg' : 'bi-x-lg' ?>"></i>
@@ -231,7 +233,6 @@ if ($status === 'cod') {
 
             <div class="result-body">
                 <?php if ($isSuccess): ?>
-                <!-- Order details -->
                 <div class="mb-3">
                     <div class="detail-row">
                         <span class="label">Order ID</span>
@@ -266,16 +267,19 @@ if ($status === 'cod') {
                 </a>
 
                 <?php else: ?>
-                <!-- Failed -->
                 <div class="failed-note">
                     <i class="bi bi-exclamation-circle me-2"></i>
-                    Your payment was not completed. Your order has been cancelled.
+                    Your payment was not completed. Please try again to complete your order.
                 </div>
-                <a href="cart.php" class="btn-primary-custom">
-                    <i class="bi bi-arrow-left"></i> Back to Cart
+
+                <?php if (!empty($order['transaction_ref'])): ?>
+                <a href="https://toyyibpay.com/<?= htmlspecialchars($order['transaction_ref']) ?>" class="btn-primary-custom">
+                    <i class="bi bi-bank"></i> Complete Payment
                 </a>
-                <a href="items.php" class="btn-outline-custom">
-                    <i class="bi bi-bag-heart"></i> Continue Shopping
+                <?php endif; ?>
+
+                <a href="../order/my_orders.php" class="btn-outline-custom">
+                    <i class="bi bi-receipt"></i> View My Orders
                 </a>
                 <?php endif; ?>
             </div>

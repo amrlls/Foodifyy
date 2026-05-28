@@ -99,7 +99,7 @@ try {
 
     // 5. COD — terus ke return page
     if ($method === 'cod') {
-        echo json_encode(['status' => 'success', 'redirect' => 'payment_return.php?order_id=' . $orderId . '&status=cod']);
+        echo json_encode(['status' => 'success', 'redirect' => 'payment_return.php?my_order_id=' . $orderId . '&status=cod']);
         exit;
     }
 
@@ -107,7 +107,7 @@ try {
     $billName        = 'Foodifyy Order #' . str_pad($orderId, 6, '0', STR_PAD_LEFT);
     $billDesc        = 'Grocery order from Foodifyy';
     $billAmount      = number_format($total * 100, 0, '.', ''); // dalam sen
-    $billReturnUrl   = TOYYIBPAY_RETURN_URL . '?order_id=' . $orderId;
+    $billReturnUrl   = TOYYIBPAY_RETURN_URL . '?my_order_id=' . $orderId;
     $billCallbackUrl = TOYYIBPAY_CALLBACK_URL;
     $billExternalRef = 'ORDER-' . $orderId;
 
@@ -127,7 +127,7 @@ try {
         'billPhone'       => $phone,
         'billSplitPayment'=> 0,
         'billSplitPaymentArgs' => '',
-        'billPaymentChannel'   => '0', // 0 = FPX only
+        'billPaymentChannel'   => '0',
         'billContentEmail'     => 'Thank you for your order at Foodifyy!',
         'billChargeToCustomer' => 1,
     ];
