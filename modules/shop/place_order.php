@@ -104,6 +104,7 @@ try {
     }
 
     // 6. Online banking — create ToyyibPay bill
+    date_default_timezone_set('Asia/Kuala_Lumpur');
     $billName        = 'Foodifyy Order #' . str_pad($orderId, 6, '0', STR_PAD_LEFT);
     $billDesc        = 'Grocery order from Foodifyy';
     $billAmount      = number_format($total * 100, 0, '.', ''); // dalam sen

@@ -188,7 +188,7 @@ if ($status === 'cod') {
 
 <div class="sidebar">
     <div class="sidebar-logo"><h2>foodify.</h2></div>
-    <div class="sidebar-greet-box"><p><?= $isSuccess ? 'Thank you! 🎉' : 'Something went wrong.' ?></p></div>
+    <div class="sidebar-greet-box"><p><?= $isSuccess ? 'Thank you! ' : 'Something went wrong.' ?></p></div>
     <ul class="sidebar-nav">
         <li><a href="../../index.php"><i class="bi bi-house-door-fill"></i> Home</a></li>
         <li><a href="../recipe/recipes.php"><i class="bi bi-book"></i> Recipes</a></li>
