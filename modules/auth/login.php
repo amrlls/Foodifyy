@@ -1,4 +1,5 @@
 <?php
+
 session_start();
 require_once __DIR__ . '/../../config/database.php';
 
@@ -39,7 +40,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 } elseif ($role === 'staff') {
                     header("Location: ../staff/dashboard.php");
                 } else {
-                    header("Location: ../index.php");
+                    header("Location: ../../index.php");
                 }
                 exit();
             }
