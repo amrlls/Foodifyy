@@ -116,7 +116,19 @@ $count  = count($orders);
 
         .main-content { margin-left: var(--sidebar-w); padding: 0; min-height: 100vh; background: white; }
         .header-section { padding: 3rem 4rem 2rem; background: white; border-bottom: 1px solid #f5f5f5; }
-        .header-section h1 { font-family: 'Playfair Display', serif; font-size: 3rem; font-weight: 900; }
+        .top-bar h1 {
+            font-family: 'Playfair Display', serif;
+            font-size: 3.5rem;
+            font-weight: 900;
+            line-height: 1;
+            margin-bottom: 1rem;
+        }
+
+        .header-section {
+            padding: 3rem 4rem 2rem;
+            background: white;
+            border-bottom: 1px solid #f5f5f5;
+        }
         .header-section p { color: #7f8c8d; font-size: 1rem; margin-top: 0.5rem; }
 
         .content-body { padding: 2rem 4rem; }
@@ -146,15 +158,32 @@ $count  = count($orders);
 
         /* Status badges */
         .status-badge {
-            padding: 5px 14px; border-radius: 100px;
-            font-size: 0.72rem; font-weight: 800; text-transform: uppercase; letter-spacing: 0.5px;
-            display: inline-flex; align-items: center; gap: 6px;
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 0.7rem;
+            font-weight: 700;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;               
+            text-transform: uppercase;
+            width: 110px;
+        }
+
+        /* Dot styling */
+        .status-badge::before {
+            content: '';
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: currentColor; 
+            flex-shrink: 0;  
         }
         .status-badge i { font-size: 0.5rem; }
         .status-badge.pending    { background: rgba(116,185,255,0.15); color: #0984e3; }
         .status-badge.processing { background: rgba(253,203,110,0.2);  color: #e17055; }
-        .status-badge.completed  { background: rgba(0,184,148,0.15);   color: #00b894; }
-
+        .status-badge.completed  { background: rgba(46, 204, 113, 0.12);color: #27ae60; }
+        
         .order-divider { border: none; border-top: 1px solid #f5f5f5; margin: 1rem 0; }
 
         .order-meta {
@@ -245,10 +274,14 @@ $count  = count($orders);
 </div>
 
 <div class="main-content">
-    <div class="header-section">
-        <h1>My Orders</h1>
-        <p><?= $count ?> order<?= $count !== 1 ? 's' : '' ?> found</p>
+    <div class="d-flex justify-content-between align-items-end header-section">
+    <div class="top-bar">
+        <h1 class="page-title">My Orders</h1>
+        <p class="text-muted mb-0">
+            <?= $count ?> order<?= $count !== 1 ? 's' : '' ?> found
+        </p>
     </div>
+</div>
 
     <div class="content-body">
         <!-- Filter tabs -->
@@ -287,7 +320,6 @@ $count  = count($orders);
                             <div class="order-date"><?= date('d M Y, h:i A', strtotime($order['created_at'])) ?></div>
                         </div>
                         <span class="status-badge <?= $order['status'] ?>">
-                            <i class="bi bi-circle-fill"></i>
                             <?= ucfirst($order['status']) ?>
                         </span>
                     </div>
