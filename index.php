@@ -11,6 +11,7 @@ $nav_profile_img = "";
 $nav_role = "Customer";
 $username = 'Guest';
 
+
 if ($isLoggedIn) {
     $stmt_nav = $conn->prepare("SELECT username, profile_image, role FROM users WHERE user_id = ?");
     $stmt_nav->bind_param("i", $userId);
@@ -28,7 +29,7 @@ $greeting = "Welcome to Foodify!";
 if ($isLoggedIn) {
     $role_clean = strtolower($nav_role);
     if ($role_clean == 'admin') {
-        $greeting = "System active. Ready to manage, Admin?";
+        $greeting = "Ready to manage, Admin?";
     } elseif ($role_clean == 'seller') {
         $greeting = "Your shop is open! Check your stock.";
     } else {
