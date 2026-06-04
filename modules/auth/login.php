@@ -12,7 +12,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if (!$email || !$password) {
         $error = 'Please fill in all fields.';
     } else {
-        $stmt = $conn->prepare("SELECT user_id, username, password, role FROM users WHERE email = ?");
+        $stmt = $conn->prepare("SELECT user_id, username, password, role, status FROM users WHERE email = ?");
         $stmt->bind_param("s", $email);
         $stmt->execute();
         $stmt->store_result();
@@ -20,21 +20,23 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         if ($stmt->num_rows === 0) {
             $error = 'Email not found.';
         } else {
-            $user_id   = '';
+            $user_id  = '';
             $username = '';
             $hashed   = '';
             $role     = '';
-            $stmt->bind_result($user_id, $username, $hashed, $role);
+            $status   = '';
+            $stmt->bind_result($user_id, $username, $hashed, $role, $status);
             $stmt->fetch();
 
             if (!password_verify($password, $hashed)) {
                 $error = 'Wrong password.';
+            } elseif ($status === 'inactive') {
+                $error = 'Your account has been deactivated. Please contact the administrator.';
             } else {
                 $_SESSION['user_id']  = $user_id;
                 $_SESSION['username'] = $username;
                 $_SESSION['role']     = $role;
 
-                // Redirect based on role
                 if ($role === 'admin') {
                     header("Location: ../admin/dashboard.php");
                 } elseif ($role === 'staff') {
@@ -82,7 +84,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             overflow-x: hidden;
         }
 
-        /* Decorative background shapes */
         .bg-shape {
             position: absolute;
             z-index: -1;
@@ -118,13 +119,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             font-weight: 900;
             font-size: 2.8rem;
             background: var(--primary-grad);
-            
-            -webkit-background-clip: text; background-clip: text;  
-      
-
-        -webkit-text-fill-color: transparent;
-        color: transparent;    
-            
+            -webkit-background-clip: text; background-clip: text;
+            -webkit-text-fill-color: transparent;
+            color: transparent;
             margin-bottom: 0.2rem;
             letter-spacing: -1px;
         }
@@ -136,7 +133,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         h2 { font-weight: 800; font-size: 1.8rem; letter-spacing: -0.8px; color: #1a1a1a; }
         .subtitle { color: #8e8e93; font-size: 0.95rem; margin-bottom: 2rem; }
 
-        /* ── INPUTS ── */
         .input-group-custom {
             position: relative;
             margin-bottom: 1.2rem;
@@ -171,7 +167,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
 
         .input-group-custom input::placeholder { color: #adb5bd; font-weight: 400; }
-
         .input-group-custom:focus-within .input-left-icon { color: var(--accent); }
 
         .eye-toggle {
@@ -187,10 +182,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             z-index: 5;
             transition: 0.2s;
         }
-
         .eye-toggle:hover { color: var(--accent); }
 
-        /* ── BUTTONS & LINKS ── */
         .btn-login {
             background: var(--primary-grad);
             color: white;
@@ -223,10 +216,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         .forgot-link a:hover { opacity: 0.8; }
 
         .register-link { text-align: center; margin-top: 2.2rem; font-size: 0.95rem; color: #636E72; }
-        .register-link a { 
-            color: #2D3436; 
-            font-weight: 800; 
-            text-decoration: none; 
+        .register-link a {
+            color: #2D3436;
+            font-weight: 800;
+            text-decoration: none;
             position: relative;
             padding-bottom: 2px;
         }
@@ -287,7 +280,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 </head>
 <body>
 
-<!-- Floating shapes for aesthetic depth -->
 <div class="bg-shape" style="width: 300px; height: 300px; background: #FF6B6B; top: -100px; left: -100px;"></div>
 <div class="bg-shape" style="width: 250px; height: 250px; background: #FF8E53; bottom: -50px; right: -50px;"></div>
 
@@ -348,7 +340,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     const loginForm = document.getElementById('loginForm');
     const submitBtn = document.getElementById('submitBtn');
 
-    // Password Toggle Logic
     eyeToggle.addEventListener('click', () => {
         if (pwdInput.type === 'password') {
             pwdInput.type = 'text';
@@ -359,13 +350,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
     });
 
-    // Loading State UI Enhancement
     loginForm.addEventListener('submit', () => {
         submitBtn.style.opacity = '0.7';
         submitBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span> Signing in...';
     });
 
-    // Auto hide error after 3 seconds
     const errorAlert = document.getElementById('errorAlert');
     if (errorAlert) {
         setTimeout(function() {

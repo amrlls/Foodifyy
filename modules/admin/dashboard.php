@@ -196,19 +196,18 @@ $recent_orders = $recent ? $recent->fetch_all(MYSQLI_ASSOC) : [];
             display: inline-flex;
             align-items: center;
             justify-content: center;
-            gap: 6px;               
+            gap: 6px;
             text-transform: uppercase;
             width: 110px;
         }
 
-        /* Dot styling */
         .status-badge::before {
             content: '';
             width: 8px;
             height: 8px;
             border-radius: 50%;
-            background: currentColor;  
-            flex-shrink: 0; 
+            background: currentColor;
+            flex-shrink: 0;
         }
 
         .status-pending    { background: rgba(116,185,255,0.15); color: #0984e3; }
@@ -450,7 +449,7 @@ $recent_orders = $recent ? $recent->fetch_all(MYSQLI_ASSOC) : [];
     <!-- Recent Orders -->
     <div class="section-header">
         <h5>Recent Orders</h5>
-        <a href="manage_orders.php" class="btn-view">View All →</a>
+        <a href="manage_orders.php" class="btn-view">Manage Orders →</a>
     </div>
 
     <?php foreach ($recent_orders as $order):
@@ -473,9 +472,6 @@ $recent_orders = $recent ? $recent->fetch_all(MYSQLI_ASSOC) : [];
             </div>
             <div class="col-md-3">
                 <span class="status-badge <?= $statusClass ?>"><?= ucfirst($order['status']) ?></span>
-            </div>
-            <div class="col-md-3 text-end">
-                <a href="manage_orders.php?id=<?= $order['order_id'] ?>" class="btn-view">View</a>
             </div>
         </div>
     </div>
