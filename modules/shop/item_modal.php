@@ -71,7 +71,7 @@
     animation:fadeUp 0.4s ease 0.15s both;
 }
 .modal-name {
-    font-family:'Playfair Display',serif; font-size:1.55rem; font-weight:900;
+    font-family:'Plus Jakarta Sans',serif; font-size:1.55rem; font-weight:900;
     color:#1A1C1E; line-height:1.15; margin-bottom:0.6rem;
     animation:fadeUp 0.4s ease 0.2s both;
 }
