@@ -218,7 +218,7 @@ function openModal(id, name, cat, price, imgSrc, grad, icon, stock, unit, desc) 
         badge.style.background = 'rgba(253,203,110,0.22)'; badge.style.color = '#e17055';
     } else {
         badge.textContent = 'In stock';
-        badge.style.background = 'rgba(58, 193, 101, 0.18)'; badge.style.color = '#27ae60';
+        badge.style.background = 'rgba(68, 160, 94, 0.18)'; badge.style.color = '#40c356';
     }
 
     document.getElementById('modalCat').textContent   = cat;
