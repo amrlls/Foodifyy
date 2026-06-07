@@ -32,7 +32,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
         $stmt->bind_param("si", $newStatus, $orderId);
         $stmt->execute();
 
-        // Bila completed, update payment status jadi success
         if ($newStatus === 'completed') {
             $stmtPay = $conn->prepare("UPDATE payments SET status = 'success', paid_at = NOW() WHERE order_id = ? AND status != 'success'");
             $stmtPay->bind_param("i", $orderId);
@@ -49,6 +48,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
 // Filters
 $search        = trim($_GET['search'] ?? '');
 $statusFilter  = $_GET['status'] ?? 'all';
+$dateFilter    = $_GET['date_filter'] ?? 'all';
 
 $where  = ["1=1"];
 $params = [];
@@ -65,6 +65,15 @@ if ($statusFilter !== 'all') {
     $where[]  = "o.status = ?";
     $params[] = $statusFilter;
     $types   .= 's';
+}
+if ($dateFilter !== 'all') {
+    match($dateFilter) {
+        'today' => $where[] = "DATE(o.created_at) = CURDATE()",
+        'week'  => $where[] = "YEARWEEK(o.created_at, 1) = YEARWEEK(NOW(), 1)",
+        'month' => $where[] = "MONTH(o.created_at) = MONTH(NOW()) AND YEAR(o.created_at) = YEAR(NOW())",
+        'year'  => $where[] = "YEAR(o.created_at) = YEAR(NOW())",
+        default => null
+    };
 }
 
 $whereSQL = implode(' AND ', $where);
@@ -92,7 +101,7 @@ $completed_count   = $conn->query("SELECT COUNT(*) as t FROM orders WHERE status
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Manage Orders – Admin</title>
+    <title>Manage Orders – Staff</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
     <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;600;700;800&family=Playfair+Display:wght@700;900&display=swap" rel="stylesheet">
@@ -123,7 +132,6 @@ $completed_count   = $conn->query("SELECT COUNT(*) as t FROM orders WHERE status
         .page-header h1 { font-family: 'Playfair Display', serif; font-size: 3.5rem; font-weight: 900; }
         .page-header p { color: #7f8c8d; margin-top: 4px; font-size: 0.9rem; }
 
-        /* Stats */
         .stat-row { display: grid; grid-template-columns: repeat(4, 1fr); gap: 1rem; margin-bottom: 1.5rem; }
         .stat-card { background: white; border-radius: 18px; padding: 1.2rem 1.5rem; box-shadow: 0 4px 20px rgba(0,0,0,0.04); display: flex; justify-content: space-between; align-items: center; }
         .stat-card .label { font-size: 0.72rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.8px; color: #bdc3c7; margin-bottom: 4px; }
@@ -148,7 +156,6 @@ $completed_count   = $conn->query("SELECT COUNT(*) as t FROM orders WHERE status
         .order-row.header > div:nth-child(1), .order-row.header > div:nth-child(2) { text-align: left; }
 
         .order-id { font-weight: 800; font-size: 0.88rem; color: #1A1C1E; }
-        .order-customer { font-size: 0.75rem; color: #bdc3c7; margin-top: 2px; }
         .order-amount { font-weight: 800; font-size: 0.9rem; background: var(--primary-grad); background-clip: text; -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
 
         .status-badge { display: inline-flex; align-items: center; justify-content: center; gap: 6px; padding: 4px 14px; border-radius: 100px; font-size: 0.7rem; font-weight: 700; text-transform: uppercase; min-width: 100px; }
@@ -163,7 +170,6 @@ $completed_count   = $conn->query("SELECT COUNT(*) as t FROM orders WHERE status
         .pay-success { background: rgba(46,204,113,0.12); color: #27ae60; }
         .pay-failed  { background: rgba(225,112,85,0.12); color: #e17055; }
 
-        .action-btns { display: flex; gap: 6px; justify-content: center; }
         .btn-view-order { padding: 6px 14px; border-radius: 10px; border: 1.5px solid #eee; background: white; color: #1A1C1E; font-size: 0.75rem; font-weight: 700; cursor: pointer; transition: 0.2s; display: inline-flex; align-items: center; gap: 5px; text-decoration: none; }
         .btn-view-order:hover { background: #1A1C1E; color: white; border-color: #1A1C1E; }
 
@@ -171,16 +177,9 @@ $completed_count   = $conn->query("SELECT COUNT(*) as t FROM orders WHERE status
         .empty-state i { font-size: 3rem; color: #eee; display: block; margin-bottom: 1rem; }
         .empty-state p { color: #bdc3c7; font-size: 0.9rem; }
 
-        /* Order detail panel */
         .detail-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.5); backdrop-filter: blur(6px); z-index: 9998; display: none; }
         .detail-overlay.active { display: block; }
-        .detail-panel {
-            position: fixed; right: -520px; top: 0; width: 500px; height: 100vh;
-            background: white; z-index: 9999; overflow-y: auto;
-            box-shadow: -20px 0 60px rgba(0,0,0,0.15);
-            transition: right 0.35s cubic-bezier(0.34,1.06,0.64,1);
-            padding: 2rem;
-        }
+        .detail-panel { position: fixed; right: -520px; top: 0; width: 500px; height: 100vh; background: white; z-index: 9999; overflow-y: auto; box-shadow: -20px 0 60px rgba(0,0,0,0.15); transition: right 0.35s cubic-bezier(0.34,1.06,0.64,1); padding: 2rem; }
         .detail-panel.open { right: 0; }
         .detail-panel::-webkit-scrollbar { width: 4px; }
         .detail-panel::-webkit-scrollbar-thumb { background: #eee; border-radius: 4px; }
@@ -200,20 +199,9 @@ $completed_count   = $conn->query("SELECT COUNT(*) as t FROM orders WHERE status
         .item-line { display: flex; justify-content: space-between; align-items: center; padding: 0.5rem 0; border-bottom: 1px solid #eee; font-size: 0.85rem; }
         .item-line:last-child { border-bottom: none; }
 
-        /* Status update select */
-        .status-select {
-            padding: 10px 16px; border-radius: 12px; border: 1.5px solid #f0f0f0;
-            background: #f8f9fa; font-family: 'Plus Jakarta Sans', sans-serif;
-            font-size: 0.88rem; font-weight: 600; cursor: pointer; width: 100%;
-            transition: 0.2s;
-        }
+        .status-select { padding: 10px 16px; border-radius: 12px; border: 1.5px solid #f0f0f0; background: #f8f9fa; font-family: 'Plus Jakarta Sans', sans-serif; font-size: 0.88rem; font-weight: 600; cursor: pointer; width: 100%; transition: 0.2s; }
         .status-select:focus { border-color: var(--accent); outline: none; }
-        .btn-update-status {
-            width: 100%; padding: 12px; border: none; border-radius: 14px;
-            background: var(--primary-grad); color: white; font-weight: 800; font-size: 0.9rem;
-            font-family: 'Plus Jakarta Sans', sans-serif; cursor: pointer; transition: 0.3s;
-            margin-top: 0.8rem; box-shadow: 0 6px 16px rgba(255,107,107,0.25);
-        }
+        .btn-update-status { width: 100%; padding: 12px; border: none; border-radius: 14px; background: var(--primary-grad); color: white; font-weight: 800; font-size: 0.9rem; font-family: 'Plus Jakarta Sans', sans-serif; cursor: pointer; transition: 0.3s; margin-top: 0.8rem; box-shadow: 0 6px 16px rgba(255,107,107,0.25); }
         .btn-update-status:hover { opacity: 0.88; transform: translateY(-1px); }
 
         .alert-toast { padding: 14px 20px; border-radius: 16px; font-weight: 700; font-size: 0.88rem; margin-bottom: 1.5rem; display: flex; align-items: center; animation: slideDown 0.3s ease; }
@@ -235,7 +223,6 @@ $completed_count   = $conn->query("SELECT COUNT(*) as t FROM orders WHERE status
         <div class="nav-section-label">Manage</div>
         <li><a href="manage_items.php"><i class="bi bi-bag-heart-fill"></i> Manage Items</a></li>
         <li><a href="manage_orders.php" class="active"><i class="bi bi-receipt"></i> Manage Orders</a></li>
-        <li><a </li>
     </ul>
     <div class="sidebar-footer">
         <a href="../staff/profile.php" class="text-decoration-none d-block">
@@ -346,6 +333,13 @@ $completed_count   = $conn->query("SELECT COUNT(*) as t FROM orders WHERE status
                 <option value="processing" <?= $statusFilter === 'processing' ? 'selected' : '' ?>>Processing</option>
                 <option value="completed"  <?= $statusFilter === 'completed'  ? 'selected' : '' ?>>Completed</option>
             </select>
+            <select name="date_filter" class="filter-select" onchange="document.getElementById('filterForm').submit()">
+                <option value="all"   <?= $dateFilter === 'all'   ? 'selected' : '' ?>>All Time</option>
+                <option value="today" <?= $dateFilter === 'today' ? 'selected' : '' ?>>Today</option>
+                <option value="week"  <?= $dateFilter === 'week'  ? 'selected' : '' ?>>This Week</option>
+                <option value="month" <?= $dateFilter === 'month' ? 'selected' : '' ?>>This Month</option>
+                <option value="year"  <?= $dateFilter === 'year'  ? 'selected' : '' ?>>This Year</option>
+            </select>
         </form>
         <span class="count-badge"><?= $count ?> results</span>
     </div>
@@ -396,7 +390,6 @@ $completed_count   = $conn->query("SELECT COUNT(*) as t FROM orders WHERE status
 <script>
 let currentOrderId = null;
 
-// Auto hide toast
 document.querySelectorAll('.alert-toast').forEach(el => {
     setTimeout(() => {
         el.style.transition = 'opacity 0.5s';
@@ -405,7 +398,6 @@ document.querySelectorAll('.alert-toast').forEach(el => {
     }, 3000);
 });
 
-// Search
 const searchInput = document.getElementById('searchInput');
 if (searchInput) {
     searchInput.addEventListener('input', () => {
@@ -428,7 +420,6 @@ function openPanel(order) {
     document.getElementById('dTotal').textContent             = 'RM ' + parseFloat(order.total_price).toFixed(2);
     document.getElementById('dStatusSelect').value            = order.status;
 
-    // Load order items
     loadOrderItems(order.order_id);
 
     document.getElementById('detailOverlay').classList.add('active');
@@ -473,12 +464,10 @@ async function updateStatus() {
     const res  = await fetch('manage_orders.php', { method: 'POST', body: fd });
     const data = await res.json();
     if (data.status === 'success') {
-        // Update payment status display if completed
         if (newStatus === 'completed') {
             document.getElementById('dPaymentStatus').textContent = 'Success';
         }
 
-        // Update badge in table
         document.querySelectorAll('.order-row').forEach(row => {
             const onclick = row.getAttribute('onclick') || '';
             if (onclick.includes('"order_id":' + currentOrderId) || onclick.includes('"order_id":"' + currentOrderId + '"')) {
@@ -492,7 +481,6 @@ async function updateStatus() {
 
         closePanel();
 
-        // Show toast
         const toast = document.createElement('div');
         toast.className = 'alert-toast success';
         toast.innerHTML = '<i class="bi bi-check-circle-fill me-2"></i> Order status updated!';
@@ -503,7 +491,6 @@ async function updateStatus() {
             setTimeout(() => toast.remove(), 500);
         }, 3000);
 
-        // Reload page selepas 1 saat supaya table refresh
         setTimeout(() => location.reload(), 1000);
     }
 }

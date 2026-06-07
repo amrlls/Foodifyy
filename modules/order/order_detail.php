@@ -156,7 +156,7 @@ $isPendingOnline = ($order['status'] === 'pending' && $order['method'] === 'onli
         }
         .status-badge.pending    { background: rgba(116,185,255,0.15); color: #0984e3; }
         .status-badge.processing { background: rgba(253,203,110,0.2);  color: #e17055; }
-        .status-badge.completed  { background: rgba(0,184,148,0.15);   color: #00b894; }
+        .status-badge.completed  { background: rgba(46,204,113,0.12); color: #27ae60; }
 
         /* Detail rows */
         .detail-row {
@@ -380,7 +380,7 @@ $isPendingOnline = ($order['status'] === 'pending' && $order['method'] === 'onli
                         <span class="label">Status</span>
                         <span class="value">
                             <?php if ($order['pay_status'] === 'success' || ($order['method'] === 'cod' && $order['status'] === 'completed')): ?>
-                                <span style="color:#00b894;font-weight:800;">Paid</span>
+                                <span style="color:#27ae60;font-weight:800;">Paid</span>
                             <?php elseif ($order['pay_status'] === 'failed'): ?>
                                 <span style="color:#e17055;font-weight:800;">Failed</span>
                             <?php else: ?>
