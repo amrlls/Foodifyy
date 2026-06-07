@@ -47,7 +47,7 @@ $sql_recipes = "SELECT r.*,
 $res_recipes = $conn->query($sql_recipes);
 $recipes = $res_recipes->fetch_all(MYSQLI_ASSOC);
 
-$sql_items = "SELECT * FROM items LIMIT 6";
+$sql_items = "SELECT * FROM items LIMIT 8";
 $res_items = $conn->query($sql_items);
 $items = $res_items->fetch_all(MYSQLI_ASSOC);
 
@@ -137,7 +137,7 @@ if ($isLoggedIn) {
         .recipe-item {
             background: #ffffff; border-radius: 28px; padding: 1rem;
             transition: all 0.4s cubic-bezier(0.165, 0.84, 0.44, 1);
-            border: 1px solid rgba(0,0,0,0.04); margin-bottom: 1.8rem;
+            border: 1px solid rgba(0,0,0,0.04); margin-bottom: 2.60rem;
             cursor: pointer; position: relative;
         }
         .recipe-item:hover { transform: translateY(-8px) scale(1.01); box-shadow: 0 25px 50px rgba(0,0,0,0.08); }
@@ -154,6 +154,14 @@ if ($isLoggedIn) {
             letter-spacing: -0.5px; color: #1A1C1E; transition: color 0.3s ease;
         }
         .recipe-item:hover h5 { color: #FF6B6B; }
+
+        .recipe-item p {
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+    min-height: 48px;
+}
         .cuisine-tag {
             font-size: 0.65rem; text-transform: uppercase; letter-spacing: 1px;
             font-weight: 700; padding: 5px 12px; background: #F8F9FA;
@@ -180,7 +188,20 @@ if ($isLoggedIn) {
             display: flex; flex-direction: column;
             box-shadow: 0 2px 12px rgba(0,0,0,0.04);
             cursor: pointer;
+             margin-bottom: 1.8rem;
+             
         }
+        .row.g-3 {
+    align-items: stretch;
+}
+
+.row.g-3 > .col-sm-6 {
+    display: flex;
+}
+
+.grocery-card {
+    width: 100%; /* tambah ini */
+}
         .grocery-card:hover { box-shadow: 0 16px 36px rgba(0,0,0,0.1); transform: translateY(-4px); }
         .grocery-card:hover .product-img-wrapper img { transform: scale(1.06); }
         .grocery-card-img {
@@ -384,7 +405,6 @@ const cartPath   = 'modules/shop/addtocart.php'; // ← path untuk modal
 </script>
 
 <?php $cartUrl = 'modules/shop/cart.php'; ?>
-<?php include __DIR__ . '/modules/shop/item_modal.php'; ?>
 <?php include __DIR__ . '/modules/shop/item_modal.php'; ?>
 
 <script>
