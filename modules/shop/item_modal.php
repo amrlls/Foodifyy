@@ -145,7 +145,7 @@
 .modal-btn-cart:hover { border-color:#1A1C1E; color:#1A1C1E; }
 </style>
 
-<!-- ── MODAL HTML ── -->
+<!-- Modal -->
 <div id="itemModal" onclick="handleBackdropClick(event)">
     <div id="modalBox">
         <button class="modal-close-btn" onclick="closeModal()">
@@ -186,7 +186,7 @@
     </div>
 </div>
 
-<!-- ── MODAL JS ── -->
+<!-- Modal Js -->
 <script>
 let modalItemId   = null;
 let modalMaxStock = 0;
@@ -289,7 +289,6 @@ async function addToCartModal() {
             btn.classList.add('success');
             btn.innerHTML = '<i class="bi bi-check-lg"></i> Added!';
 
-            // Update badge — handle index.php (#cartBadge) dan items.php (.cart-count)
             const cartBadge = document.getElementById('cartBadge');
             if (cartBadge) {
                 cartBadge.style.display = 'inline-flex';
