@@ -30,8 +30,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
     exit;
 }
 
-$search   = trim($_GET['search'] ?? '');
-$category = $_GET['category'] ?? 'all';
+$search       = trim($_GET['search'] ?? '');
+$category     = $_GET['category'] ?? 'all';
 $stock_filter = $_GET['stock'] ?? 'all';
 
 $where  = ["1=1"];
@@ -47,8 +47,8 @@ $sql  = "SELECT * FROM items WHERE $whereSQL ORDER BY created_at DESC";
 $stmt = $conn->prepare($sql);
 if (!empty($params)) { $stmt->bind_param($types, ...$params); }
 $stmt->execute();
-$items = $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
-$count = count($items);
+$items      = $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
+$count      = count($items);
 $categories = $conn->query("SELECT DISTINCT category FROM items ORDER BY category")->fetch_all(MYSQLI_ASSOC);
 ?>
 <!DOCTYPE html>
@@ -92,7 +92,7 @@ $categories = $conn->query("SELECT DISTINCT category FROM items ORDER BY categor
         .filter-select { padding: 10px 16px; border-radius: 12px; border: 1.5px solid #f0f0f0; background: #f8f9fa; font-family: 'Plus Jakarta Sans', sans-serif; font-size: 0.88rem; font-weight: 500; cursor: pointer; }
         .count-badge { background: #f8f9fa; border-radius: 100px; padding: 6px 14px; font-size: 0.8rem; font-weight: 700; color: #7f8c8d; }
         .table-card { background: white; border-radius: 20px; box-shadow: 0 4px 20px rgba(0,0,0,0.04); overflow: hidden; }
-        .item-row { display: grid; grid-template-columns: 60px 1fr 130px 100px 120px 160px; gap: 1rem; align-items: center; padding: 1rem 1.5rem; border-bottom: 1px solid #f8f9fa; transition: 0.2s; }
+        .item-row { display: grid; grid-template-columns: 60px 1fr 130px 100px 120px 200px; gap: 1rem; align-items: center; padding: 1rem 1.5rem; border-bottom: 1px solid #f8f9fa; transition: 0.2s; }
         .item-row:last-child { border-bottom: none; }
         .item-row:hover { background: #fafafa; }
         .item-row.header { background: #f8f9fa; font-size: 0.72rem; font-weight: 800; text-transform: uppercase; letter-spacing: 0.8px; color: #bdc3c7; padding: 0.8rem 1.5rem; }
@@ -115,10 +115,23 @@ $categories = $conn->query("SELECT DISTINCT category FROM items ORDER BY categor
         .stock-out { background: rgba(225,112,85,0.12);  color: #d63031; }
         .empty-state { text-align: center; padding: 4rem 2rem; }
         .empty-state i { font-size: 3rem; color: #eee; display: block; margin-bottom: 1rem; }
-        .btn-update-stock { padding: 7px 16px; border-radius: 10px; border: none; background: var(--primary-grad); color: white; font-size: 0.75rem; font-weight: 700; cursor: pointer; transition: 0.2s; display: inline-flex; align-items: center; gap: 5px; }
-        .btn-update-stock:hover { opacity: 0.85; }
-        .stock-input { width: 70px; padding: 6px 10px; border-radius: 10px; border: 1.5px solid #f0f0f0; font-family: 'Plus Jakarta Sans', sans-serif; font-size: 0.85rem; font-weight: 600; text-align: center; }
-        .stock-input:focus { border-color: var(--accent); outline: none; }
+
+        /* Stock control */
+        .stock-control { display: flex; align-items: center; gap: 8px; justify-content: center; }
+        .qty-wrap { display: flex; align-items: center; border: 1.5px solid #f0f0f0; border-radius: 12px; overflow: hidden; background: #f8f9fa; transition: 0.2s; }
+        .qty-wrap.changed { border-color: #FF8E53; background: #fff8f5; }
+        .qty-btn { width: 32px; height: 34px; border: none; background: transparent; font-size: 1rem; font-weight: 700; cursor: pointer; color: #1A1C1E; transition: 0.2s; }
+        .qty-btn:hover { background: #eee; }
+        .stock-input { width: 52px; height: 34px; border: none; border-left: 1.5px solid #f0f0f0; border-right: 1.5px solid #f0f0f0; background: white; text-align: center; font-family: 'Plus Jakarta Sans', sans-serif; font-size: 0.85rem; font-weight: 700; outline: none; }
+        .stock-input::-webkit-outer-spin-button,
+        .stock-input::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+        .stock-input[type=number] { -moz-appearance: textfield; appearance: textfield; }
+
+        /* Save All button */
+        .btn-save-all { padding: 12px 24px; border-radius: 14px; border: none; background: #eee; color: #bdc3c7; font-size: 0.88rem; font-weight: 800; cursor: not-allowed; transition: 0.3s; display: inline-flex; align-items: center; gap: 8px; font-family: 'Plus Jakarta Sans', sans-serif; }
+        .btn-save-all.active { background: var(--primary-grad); color: white; cursor: pointer; box-shadow: 0 8px 20px rgba(255,107,107,0.25); }
+        .btn-save-all.active:hover { opacity: 0.88; transform: translateY(-2px); }
+
         .alert-toast { padding: 14px 20px; border-radius: 16px; font-weight: 700; font-size: 0.88rem; margin-bottom: 1.5rem; display: flex; align-items: center; animation: slideDown 0.3s ease; }
         .alert-toast.success { background: rgba(0,184,148,0.12); color: #00b894; border: 1px solid rgba(0,184,148,0.2); }
         @keyframes slideDown { from { opacity:0; transform:translateY(-10px); } to { opacity:1; transform:translateY(0); } }
@@ -167,6 +180,9 @@ $categories = $conn->query("SELECT DISTINCT category FROM items ORDER BY categor
             <h1>Manage Items</h1>
             <p><?= $count ?> item<?= $count !== 1 ? 's' : '' ?> found</p>
         </div>
+        <button class="btn-save-all" id="btnSaveAll" onclick="saveAll()" disabled>
+            <i class="bi bi-check2-all"></i> Save All Changes
+        </button>
     </div>
 
     <div id="toastContainer"></div>
@@ -226,11 +242,12 @@ $categories = $conn->query("SELECT DISTINCT category FROM items ORDER BY categor
             <div><span class="category-tag <?= $catClass ?>"><?= htmlspecialchars($item['category']) ?></span></div>
             <div style="font-weight:800;font-size:0.9rem;background:var(--primary-grad);background-clip:text;-webkit-background-clip:text;-webkit-text-fill-color:transparent;">RM <?= number_format($item['price'], 2) ?></div>
             <div><span class="stock-badge <?= $stockClass ?>" id="stock-badge-<?= $item['item_id'] ?>"><?= $item['stock'] == 0 ? 'Out' : ($item['stock'] <= 10 ? 'Low: '.$item['stock'] : $item['stock']) ?></span></div>
-            <div style="gap:8px;">
-                <input type="number" class="stock-input" id="stock-input-<?= $item['item_id'] ?>" value="<?= $item['stock'] ?>" min="0">
-                <button class="btn-update-stock" onclick="updateStock(<?= $item['item_id'] ?>)">
-                    <i class="bi bi-check-lg"></i> Update
-                </button>
+            <div class="stock-control">
+                <div class="qty-wrap" id="qty-wrap-<?= $item['item_id'] ?>">
+                    <button type="button" class="qty-btn" onclick="changeStock(<?= $item['item_id'] ?>, -1)">−</button>
+                    <input type="number" class="stock-input" id="stock-input-<?= $item['item_id'] ?>" value="<?= $item['stock'] ?>" min="0">
+                    <button type="button" class="qty-btn" onclick="changeStock(<?= $item['item_id'] ?>, 1)">+</button>
+                </div>
             </div>
         </div>
         <?php endforeach; ?>
@@ -240,6 +257,8 @@ $categories = $conn->query("SELECT DISTINCT category FROM items ORDER BY categor
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 <script>
+const changedItems = new Set();
+
 const searchInput = document.getElementById('searchInput');
 if (searchInput) {
     searchInput.addEventListener('input', () => {
@@ -248,27 +267,54 @@ if (searchInput) {
     });
 }
 
-async function updateStock(itemId) {
-    const newStock = parseInt(document.getElementById('stock-input-' + itemId).value);
-    if (isNaN(newStock) || newStock < 0) return;
+function changeStock(itemId, delta) {
+    const input = document.getElementById('stock-input-' + itemId);
+    let val = parseInt(input.value) + delta;
+    if (val < 0) val = 0;
+    input.value = val;
 
-    const fd = new FormData();
-    fd.append('action',   'update_stock');
-    fd.append('item_id',  itemId);
-    fd.append('stock',    newStock);
+    // Mark sebagai changed
+    changedItems.add(itemId);
+    document.getElementById('qty-wrap-' + itemId).classList.add('changed');
 
-    const res  = await fetch('manage_items.php', { method: 'POST', body: fd });
-    const data = await res.json();
+    const btn = document.getElementById('btnSaveAll');
+    btn.disabled = false;
+    btn.classList.add('active');
+    btn.innerHTML = `<i class="bi bi-check2-all"></i> Save All (${changedItems.size})`;
+}
 
-    if (data.status === 'success') {
-        // Update badge
-        const badge = document.getElementById('stock-badge-' + itemId);
-        if (badge) {
-            badge.className = 'stock-badge ' + (newStock == 0 ? 'stock-out' : newStock <= 10 ? 'stock-low' : 'stock-ok');
-            badge.textContent = newStock == 0 ? 'Out' : (newStock <= 10 ? 'Low: ' + newStock : newStock);
+async function saveAll() {
+    if (changedItems.size === 0) return;
+    const btn = document.getElementById('btnSaveAll');
+    btn.innerHTML = '<i class="bi bi-hourglass-split"></i> Saving...';
+    btn.disabled = true;
+
+    const promises = [...changedItems].map(async itemId => {
+        const val = parseInt(document.getElementById('stock-input-' + itemId).value);
+        const fd  = new FormData();
+        fd.append('action',  'update_stock');
+        fd.append('item_id', itemId);
+        fd.append('stock',   val);
+
+        const res  = await fetch('manage_items.php', { method: 'POST', body: fd });
+        const data = await res.json();
+
+        if (data.status === 'success') {
+            const badge = document.getElementById('stock-badge-' + itemId);
+            if (badge) {
+                badge.className = 'stock-badge ' + (val == 0 ? 'stock-out' : val <= 10 ? 'stock-low' : 'stock-ok');
+                badge.textContent = val == 0 ? 'Out' : (val <= 10 ? 'Low: ' + val : val);
+            }
+            document.getElementById('qty-wrap-' + itemId).classList.remove('changed');
         }
-        showToast('Stock updated successfully!');
-    }
+    });
+
+    await Promise.all(promises);
+    changedItems.clear();
+
+    btn.classList.remove('active');
+    btn.innerHTML = '<i class="bi bi-check2-all"></i> Save All Changes';
+    showToast('All stock updated successfully!');
 }
 
 function showToast(msg) {
