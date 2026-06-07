@@ -224,6 +224,7 @@ if ($isLoggedIn) {
 </head>
 <body>
 
+    <!-- Sidebar -->
 <div class="sidebar">
     <div class="sidebar-logo"><h2>foodify.</h2></div>
     <div class="sidebar-greet-box"><p><?= $greeting ?></p></div>
@@ -272,7 +273,7 @@ if ($isLoggedIn) {
     </div>
 
     <div class="row g-5">
-        <!-- RECIPES -->
+        <!-- Recipes -->
         <div class="col-lg-7">
             <div class="section-header-box">
                 <div class="d-flex justify-content-between align-items-end w-100">
@@ -312,7 +313,7 @@ if ($isLoggedIn) {
             <?php endforeach; ?>
         </div>
 
-        <!-- MARKETPLACE -->
+        <!-- Market place -->
         <div class="col-lg-5">
             <div class="section-header-box">
                 <div class="d-flex justify-content-between align-items-end w-100">
