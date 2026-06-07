@@ -8,7 +8,7 @@ $error   = '';
 $success = '';
 $email   = '';
 
-// ── STEP 2: Load from URL token ──
+//Load from URL token
 if (isset($_GET['token'])) {
     $token = $_GET['token'];
 
@@ -32,7 +32,7 @@ if (isset($_GET['token'])) {
     }
 }
 
-// ── POST STEP 1: Check email & send reset link ──
+//Check email & send reset link
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['step']) && $_POST['step'] == 1) {
     $email = trim($_POST['email'] ?? '');
 
@@ -75,7 +75,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['step']) && $_POST['st
     }
 }
 
-// ── POST STEP 2: Reset password ──
+// Reset password 
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['step']) && $_POST['step'] == 2) {
     $token    = $_POST['token']    ?? '';
     $email    = $_POST['email']    ?? '';
@@ -227,7 +227,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['step']) && $_POST['st
         .step-dot { width: 30px; height: 6px; border-radius: 10px; background: #eee; transition: 0.3s; }
         .step-dot.active { background: var(--accent); width: 50px; }
 
-        /* Email sent box */
+    
         .sent-box { text-align: center; padding: 1rem 0 0.5rem; }
         .sent-icon {
             width: 90px; height: 90px; border-radius: 50%;
@@ -236,7 +236,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['step']) && $_POST['st
             margin: 0 auto 1.5rem;
         }
 
-        /* Password updated box */
         .done-box { text-align: center; padding: 1rem 0 0.5rem; }
         .done-icon {
             width: 90px; height: 90px; border-radius: 50%;
@@ -266,7 +265,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['step']) && $_POST['st
     </div>
 
     <?php if ($success === 'sent'): ?>
-    <!-- ── EMAIL SENT ── -->
+    <!-- Email sent  -->
         <div class="sent-box">
             <div class="sent-icon">
                 <i class="bi bi-envelope-check-fill" style="font-size:2.5rem; color:#FF6B6B;"></i>
@@ -279,7 +278,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['step']) && $_POST['st
         </div>
 
     <?php elseif ($success === 'done'): ?>
-    <!-- ── PASSWORD UPDATED ── -->
+    <!-- Password updated -->
         <div class="done-box">
             <div class="done-icon">
                 <i class="bi bi-check-lg" style="font-size:2.5rem; color:#FF6B6B;"></i>
@@ -289,7 +288,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['step']) && $_POST['st
         </div>
 
     <?php elseif ($step == 1): ?>
-    <!-- ── STEP 1: Enter Email ── -->
+    <!-- Enter Email ── -->
         <h2>Forgot Password?</h2>
         <p class="subtitle">Enter your email and we'll send you a reset link.</p>
 
@@ -312,7 +311,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['step']) && $_POST['st
         </form>
 
     <?php elseif ($step == 2): ?>
-    <!-- ── STEP 2: New Password ── -->
+    <!-- New Password  -->
         <h2>Reset Password</h2>
         <p class="subtitle">Set a new password for<br><strong><?= htmlspecialchars($email) ?></strong></p>
 
