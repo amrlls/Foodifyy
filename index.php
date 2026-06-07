@@ -327,10 +327,21 @@ if ($isLoggedIn) {
             <div class="row g-3">
                 <?php foreach ($items as $item): ?>
                 <div class="col-sm-6">
-                    <div class="grocery-card shadow-sm">
+                    <?php $productImg = getImageSrc($item['image'], 'assets/images/items/'); ?>
+                    <div class="grocery-card shadow-sm" onclick="openModal(
+                        <?= $item['item_id'] ?>,
+                        '<?= addslashes(htmlspecialchars($item['name'])) ?>',
+                        '<?= addslashes(htmlspecialchars($item['category'] ?? 'Grocery')) ?>',
+                        '<?= $item['price'] ?>',
+                        '<?= $productImg ? addslashes(htmlspecialchars($productImg)) : '' ?>',
+                        'linear-gradient(135deg,#FF6B6B,#FF8E53)',
+                        'bi-basket2-fill',
+                        <?= (int)($item['stock'] ?? 99) ?>,
+                        '<?= addslashes(htmlspecialchars($item['unit'] ?? '')) ?>',
+                        '<?= addslashes(htmlspecialchars($item['description'] ?? '')) ?>'
+                    )">
                         <!-- Image -->
                         <div class="grocery-card-img">
-                            <?php $productImg = getImageSrc($item['image'], 'assets/images/items/'); ?>
                             <img src="<?= $productImg ? htmlspecialchars($productImg) : 'https://placehold.co/400x300?text=No+Image' ?>"
                                  alt="<?= htmlspecialchars($item['name']) ?>">
                         </div>
@@ -345,7 +356,7 @@ if ($isLoggedIn) {
                                     <span class="text-muted" style="font-size:0.7rem;font-weight:600;">per <?= htmlspecialchars($item['unit']) ?></span>
                                 <?php endif; ?>
                             </div>
-                            <button onclick="addToCart(event, <?= $item['item_id'] ?>, this)" class="btn-cart-minimal">
+                            <button onclick="event.stopPropagation(); addToCart(event, <?= $item['item_id'] ?>, this)" class="btn-cart-minimal">
                                 <i class="bi bi-plus-lg me-1"></i> Add
                             </button>
                         </div>
@@ -369,7 +380,14 @@ if ($isLoggedIn) {
 
 <script>
 const isLoggedIn = <?= $isLoggedIn ? 'true' : 'false' ?>;
+const cartPath   = 'modules/shop/addtocart.php'; // ← path untuk modal
+</script>
 
+<?php $cartUrl = 'modules/shop/cart.php'; ?>
+<?php include __DIR__ . '/modules/shop/item_modal.php'; ?>
+<?php include __DIR__ . '/modules/shop/item_modal.php'; ?>
+
+<script>
 async function addToCart(e, itemId, btn) {
     e.stopPropagation();
     if (!isLoggedIn) { window.location.href = 'modules/auth/login.php'; return; }

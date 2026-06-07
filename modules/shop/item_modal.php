@@ -5,6 +5,12 @@
 
 <!-- ── MODAL CSS ── -->
 <style>
+/* ── CSS Variables fallback (kalau page tak define) ── */
+:root {
+    --primary-grad: linear-gradient(135deg, #FF6B6B 0%, #FF8E53 100%);
+    --accent: #FF8E53;
+}
+
 @keyframes backdropIn  { from { opacity:0; } to { opacity:1; } }
 @keyframes backdropOut { from { opacity:1; } to { opacity:0; } }
 @keyframes modalIn  { from { opacity:0; transform:translateY(40px) scale(0.95); } to { opacity:1; transform:translateY(0) scale(1); } }
@@ -67,7 +73,7 @@
 
 .modal-cat {
     font-size:0.7rem; font-weight:800; text-transform:uppercase;
-    letter-spacing:1.5px; color:var(--accent); margin-bottom:0.4rem;
+    letter-spacing:1.5px; color:#FF8E53; color:var(--accent); margin-bottom:0.4rem;
     animation:fadeUp 0.4s ease 0.15s both;
 }
 .modal-name {
@@ -81,8 +87,10 @@
 }
 .modal-price {
     font-size:1.5rem; font-weight:800;
+    background:linear-gradient(135deg,#FF6B6B,#FF8E53);
     background:var(--primary-grad); background-clip:text;
     -webkit-background-clip:text; -webkit-text-fill-color:transparent;
+    color:#FF6B6B; /* fallback untuk browser lama */
 }
 .modal-unit { font-size:0.8rem; color:#bdc3c7; font-weight:600; }
 .modal-desc {
@@ -112,9 +120,10 @@
 }
 .modal-qty-wrap input::-webkit-outer-spin-button,
 .modal-qty-wrap input::-webkit-inner-spin-button { -webkit-appearance:none; margin:0; }
-.modal-qty-wrap input[type=number] { -moz-appearance:textfield; }
+.modal-qty-wrap input[type=number] { -moz-appearance:textfield; appearance:textfield; }
 .modal-btn-add {
     width:100%; padding:13px; border:none; border-radius:14px;
+    background:linear-gradient(135deg,#FF6B6B,#FF8E53);
     background:var(--primary-grad); color:white;
     font-weight:800; font-size:0.9rem;
     font-family:'Plus Jakarta Sans',sans-serif;
@@ -125,7 +134,7 @@
 }
 .modal-btn-add:hover:not(:disabled) { opacity:0.88; transform:translateY(-2px); box-shadow:0 10px 26px rgba(255,107,107,0.3); }
 .modal-btn-add:disabled { opacity:0.55; cursor:not-allowed; }
-.modal-btn-add.success { background:linear-gradient(135deg,#00b894,#00cec9); }
+.modal-btn-add.success { background:linear-gradient(135deg,#00b894,#00cec9) !important; }
 .modal-btn-add.success i { animation:pulse 0.4s ease; }
 .modal-btn-cart {
     width:100%; padding:11px; border:1.5px solid #eee; border-radius:14px;
@@ -172,7 +181,7 @@
             <button class="modal-btn-add" id="modalAddBtn" onclick="addToCartModal()">
                 <i class="bi bi-cart-plus"></i> Add to Cart
             </button>
-            <a href="cart.php" class="modal-btn-cart">
+            <a href="<?= isset($cartUrl) ? $cartUrl : 'cart.php' ?>" class="modal-btn-cart">
                 <i class="bi bi-bag"></i> View Cart
             </a>
         </div>
@@ -183,6 +192,11 @@
 <script>
 let modalItemId   = null;
 let modalMaxStock = 0;
+
+// cartPath boleh diset sebelum include modal
+// index.php  → const cartPath = 'modules/shop/addtocart.php';
+// items.php  → const cartPath = 'addtocart.php'; (atau tak perlu set, default sama)
+const CART_PATH = typeof cartPath !== 'undefined' ? cartPath : 'addtocart.php';
 
 function openModal(id, name, cat, price, imgSrc, grad, icon, stock, unit, desc) {
     modalItemId   = id;
@@ -221,10 +235,10 @@ function openModal(id, name, cat, price, imgSrc, grad, icon, stock, unit, desc) 
     document.getElementById('modalQty').max   = stock;
 
     const btn = document.getElementById('modalAddBtn');
-    btn.disabled        = (stock <= 0);
-    btn.className       = 'modal-btn-add';
+    btn.disabled         = (stock <= 0);
+    btn.className        = 'modal-btn-add';
     btn.style.background = '';
-    btn.innerHTML       = stock <= 0
+    btn.innerHTML        = stock <= 0
         ? '<i class="bi bi-x-circle"></i> Out of Stock'
         : '<i class="bi bi-cart-plus"></i> Add to Cart';
 
@@ -273,24 +287,24 @@ async function addToCartModal() {
         fd.append('item_id',  modalItemId);
         fd.append('quantity', qty);
 
-        const res  = await fetch('addtocart.php', { method: 'POST', body: fd });
+        const res  = await fetch(CART_PATH, { method: 'POST', body: fd });
         const data = await res.json();
 
         if (data.status === 'success') {
             btn.classList.add('success');
             btn.innerHTML = '<i class="bi bi-check-lg"></i> Added!';
 
+            // Update badge — handle index.php (#cartBadge) dan items.php (.cart-count)
+            const cartBadge = document.getElementById('cartBadge');
+            if (cartBadge) {
+                cartBadge.style.display = 'inline-flex';
+                cartBadge.textContent = parseInt(cartBadge.textContent || 0) + qty;
+            }
             const countEl = document.querySelector('.floating-cart .cart-count');
             if (countEl) {
                 countEl.textContent = parseInt(countEl.textContent || 0) + qty;
-            } else {
-                const span = document.querySelector('.floating-cart span.fw-bold');
-                if (span) {
-                    const b = document.createElement('span');
-                    b.className = 'cart-count ms-1'; b.textContent = qty;
-                    span.appendChild(b);
-                }
             }
+
             setTimeout(() => { btn.classList.remove('success'); btn.innerHTML = orig; btn.disabled = false; }, 1800);
         } else {
             btn.style.background = 'linear-gradient(135deg,#e17055,#d63031)';
