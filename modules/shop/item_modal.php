@@ -1,11 +1,9 @@
 <?php
-// item_modal.php — include dalam items.php sebelum </body>
-// Requires: $isLoggedIn, $cartCount
+
 ?>
 
-<!-- ── MODAL CSS ── -->
 <style>
-/* ── CSS Variables fallback (kalau page tak define) ── */
+
 :root {
     --primary-grad: linear-gradient(135deg, #FF6B6B 0%, #FF8E53 100%);
     --accent: #FF8E53;
@@ -193,9 +191,6 @@
 let modalItemId   = null;
 let modalMaxStock = 0;
 
-// cartPath boleh diset sebelum include modal
-// index.php  → const cartPath = 'modules/shop/addtocart.php';
-// items.php  → const cartPath = 'addtocart.php'; (atau tak perlu set, default sama)
 const CART_PATH = typeof cartPath !== 'undefined' ? cartPath : 'addtocart.php';
 
 function openModal(id, name, cat, price, imgSrc, grad, icon, stock, unit, desc) {
