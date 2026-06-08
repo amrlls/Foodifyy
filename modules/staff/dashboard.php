@@ -27,7 +27,7 @@ $total_sales       = $conn->query("SELECT SUM(total_price) as t FROM orders WHER
 $today_orders      = $conn->query("SELECT COUNT(*) as t FROM orders WHERE DATE(created_at) = CURDATE()")->fetch_assoc()['t'] ?? 0;
 $pending_orders    = $conn->query("SELECT COUNT(*) as t FROM orders WHERE status = 'pending'")->fetch_assoc()['t'] ?? 0;
 $today_sales       = $conn->query("SELECT SUM(total_price) as t FROM orders WHERE DATE(created_at) = CURDATE() AND status = 'completed'")->fetch_assoc()['t'] ?? 0;
-$weekly_sales      = $conn->query("SELECT SUM(total_price) as t FROM orders WHERE YEARWEEK(created_at) = YEARWEEK(NOW()) AND status = 'completed'")->fetch_assoc()['t'] ?? 0;
+$weekly_sales      = $conn->query("SELECT SUM(total_price) as t FROM orders WHERE YEARWEEK(created_at, 1) = YEARWEEK(NOW(), 1) AND status = 'completed'")->fetch_assoc()['t'] ?? 0;
 $monthly_sales     = $conn->query("SELECT SUM(total_price) as t FROM orders WHERE MONTH(created_at) = MONTH(NOW()) AND YEAR(created_at) = YEAR(NOW()) AND status = 'completed'")->fetch_assoc()['t'] ?? 0;
 
 $low_stock       = $conn->query("SELECT * FROM items WHERE stock <= 10 ORDER BY stock ASC LIMIT 5");
