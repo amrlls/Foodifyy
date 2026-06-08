@@ -193,8 +193,27 @@ $icons = [
         .user-card:hover img { transform: rotate(5deg); }
 
         /* ── MAIN CONTENT ── */
-        .main-content { margin-left: var(--sidebar-w); padding: 3rem 4rem; min-height: 100vh; }
-        .top-bar h1 { font-family: 'Playfair Display', serif; font-size: 3.5rem; font-weight: 900; line-height: 1; margin-bottom: 1rem; }
+        .main-content { margin-left: var(--sidebar-w); padding: 0; min-height: 100vh; }
+        .header-section { padding: 3rem 4rem 2rem; background: white; border-bottom: 1px solid #f5f5f5; }
+        .content-body { padding: 2rem 4rem; }
+
+        .header-section { padding: 3rem 4rem 2rem; background: white; border-bottom: 1px solid #f5f5f5; }
+
+        .content-body { padding: 2rem 4rem; }
+        .top-bar h1 {
+    font-family: 'Playfair Display', serif;
+    font-size: 3.5rem;
+    font-weight: 900;
+    color: #1A1C1E;
+    line-height: 1;
+    margin: 0;
+}
+
+.top-bar p {
+    color: #7f8c8d;
+    font-size: 1.1rem;
+    margin-top: 0.8rem;
+}
         
         .section-header { display: flex; align-items: center; gap: 15px; margin: 2rem 0 1rem; font-weight: 800; font-size: 1.5rem; color: #1A1C1E; }
         .section-header::after { content: ""; height: 1px; flex: 1; background: #eee; }
@@ -230,12 +249,17 @@ $icons = [
         @media (max-width: 768px) {
             .sidebar { transform: translateX(-100%); }
             .sidebar.open { transform: translateX(0); }
-            .main-content { margin-left: 0 !important; padding: 1.2rem; padding-top: 5rem; }
-            .top-bar h1 { font-size: 2.2rem; }
+            .main-content { margin-left: 0 !important; padding-top: 5rem; }
+
+            .header-section { padding: 1.2rem; }
+
+            .content-body { padding: 1rem; }
+            .top-bar h1 { font-size: 2rem; }
             .d-flex.justify-content-between { flex-direction: column; gap: 1rem; align-items: flex-start !important; }
             .btn-create { width: 100%; text-align: center; justify-content: center; display: flex; }
             .recipe-grid { grid-template-columns: 1fr; gap: 1.2rem; }
             .section-header { font-size: 1.2rem; }
+            
         }
         .topbar {
             display: none;
@@ -328,15 +352,19 @@ $icons = [
 </div>
 
 <div class="main-content">
-    <div class="d-flex justify-content-between align-items-end">
-        <div class="top-bar">
-            <h1>My Cookbook</h1>
-            <p class="text-muted mb-0">Your personal laboratory of tastes and memories.</p>
-        </div>
-        <button class="btn-create d-flex align-items-center gap-2" data-bs-toggle="modal" data-bs-target="#createRecipeModal">
-            <i class="bi bi-plus-lg"></i> Create New Recipe
-        </button>
+    <div class="header-section">
+    <div class="header-topbar">
+    <div class="top-bar">
+        <h1>My Cookbook</h1>
+        <p>Your personal laboratory of tastes and memories.</p>
     </div>
+
+    <button class="btn-create d-flex align-items-center gap-2"
+        data-bs-toggle="modal"
+        data-bs-target="#createRecipeModal">
+        <i class="bi bi-plus-lg"></i> Create New Recipe
+    </button>
+</div>
 
     <?php if (isset($_GET['success'])): ?>
         <div class="alert alert-success border-0 rounded-4 mt-4 shadow-sm">Recipe created successfully!</div>
