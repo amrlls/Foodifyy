@@ -64,7 +64,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['step']) && $_POST['st
             $ins->execute();
 
             // Build reset link — tukar domain kalau dah live
-            $resetLink = "http://localhost/Foodifyy/modules/auth/forgot_password.php?token=" . $token;
+            $protocol  = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https' : 'http';
+            $resetLink = $protocol . "://" . $_SERVER['HTTP_HOST'] . "/modules/auth/forgot_password.php?token=" . $token;
 
             if (sendResetEmail($email, $resetLink)) {
                 $success = 'sent';
