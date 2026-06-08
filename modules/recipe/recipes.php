@@ -24,7 +24,6 @@ if ($isLoggedIn) {
     }
 }
 
-// Get filters from URL
 $meal_type = $_GET['meal_type'] ?? 'all';
 $cuisine   = $_GET['cuisine']   ?? 'all';
 $search    = trim($_GET['search'] ?? '');
@@ -120,6 +119,7 @@ $icons = [
             display: flex; flex-direction: column;
             border-right: 1px solid rgba(255,255,255,0.05);
             overflow-y: auto;
+            transition: transform 0.3s ease;
         }
         .sidebar-logo h2 {
             font-family: 'Playfair Display', serif; font-weight: 900;
@@ -144,27 +144,15 @@ $icons = [
         }
         .sidebar-footer { padding-top: 2rem; border-top: 1px solid rgba(255,255,255,0.1); }
         .user-card {
-        background: rgba(255,255,255,0.03);
-        border: 1px solid rgba(255,255,255,0.08);
-        padding: 15px;
-        border-radius: 20px;
-        transition: all 0.2s ease;
-        cursor: pointer;
+            background: rgba(255,255,255,0.03);
+            border: 1px solid rgba(255,255,255,0.08);
+            padding: 15px; border-radius: 20px;
+            transition: all 0.2s ease; cursor: pointer;
         }
-        .user-card:hover {
-            background: rgba(255,255,255,0.07);
-            transform: translateY(-2px);
-        }
-        .user-card:active {
-            transform: scale(0.95);
-            background: rgba(255,255,255,0.1);
-        }
-        .user-card img {
-            transition: transform 0.3s ease;
-        }
-        .user-card:hover img {
-            transform: rotate(5deg);
-        }
+        .user-card:hover { background: rgba(255,255,255,0.07); transform: translateY(-2px); }
+        .user-card:active { transform: scale(0.95); background: rgba(255,255,255,0.1); }
+        .user-card img { transition: transform 0.3s ease; }
+        .user-card:hover img { transform: rotate(5deg); }
 
         /* ── MAIN CONTENT ── */
         .main-content { 
@@ -244,7 +232,7 @@ $icons = [
             background: #1A1C1E; border-color: #1A1C1E; color: white;
         }
 
-        .content-body {  padding: 2rem 4rem; background: #fdfdfd; }
+        .content-body { padding: 2rem 4rem; background: #fdfdfd; }
         .results-info { 
             font-weight: 700; color: #bdc3c7; 
             margin-bottom: 2rem; display: block;
@@ -307,14 +295,13 @@ $icons = [
             font-weight: 800; font-size: 1.3rem; 
             color: #1A1C1E; margin-bottom: 0.8rem;
             display: -webkit-box; -webkit-line-clamp: 1; line-clamp: 3;
- -webkit-box-orient: vertical;
-            overflow: hidden;
+            -webkit-box-orient: vertical; overflow: hidden;
         }
         .card-text {
             color: #7f8c8d; font-size: 0.9rem; line-height: 1.6;
             margin-bottom: 1.5rem;
-            display: -webkit-box; -webkit-line-clamp: 2; line-clamp: 2; -webkit-box-orient: vertical;
-            overflow: hidden;
+            display: -webkit-box; -webkit-line-clamp: 2; line-clamp: 2;
+            -webkit-box-orient: vertical; overflow: hidden;
         }
         .card-meta {
             display: flex; justify-content: space-between; align-items: center;
@@ -323,14 +310,34 @@ $icons = [
         .meta-item { display: flex; align-items: center; gap: 8px; color: #bdc3c7; font-size: 0.85rem; font-weight: 600; }
         .meta-item i { color: #1A1C1E; }
 
+        /* ── RESPONSIVE ── */
         @media (max-width: 992px) {
             .header-section, .filters-wrapper, .content-body { padding: 2rem; }
             .top-bar-flex { flex-direction: column; align-items: flex-start; gap: 20px; }
             .search-container { width: 100%; }
         }
+
+        @media (max-width: 768px) {
+            .sidebar { transform: translateX(-100%); }
+            .sidebar.open { transform: translateX(0); }
+            .main-content { margin-left: 0 !important; padding-top: 5rem; }
+            .header-section, .filters-wrapper, .content-body { padding: 1.2rem; }
+            .top-bar h1 { font-size: 2rem; }
+            .recipe-grid { grid-template-columns: 1fr; gap: 1.2rem; }
+            .search-container { width: 100%; }
+        }
     </style>
 </head>
 <body>
+
+<!-- ── TOPBAR (mobile) ── -->
+<div id="topbar" style="display:none;position:fixed;top:0;left:0;right:0;z-index:999;background:#1A1C1E;padding:1rem 1.5rem;align-items:center;justify-content:space-between;">
+    <span style="font-family:'Playfair Display',serif;font-weight:900;font-size:1.5rem;background:linear-gradient(135deg,#FF6B6B,#FF8E53);-webkit-background-clip:text;-webkit-text-fill-color:transparent;">foodify.</span>
+    <button onclick="toggleSidebar()" style="background:none;border:none;color:white;font-size:1.4rem;cursor:pointer;"><i class="bi bi-list" id="hamburgerIcon"></i></button>
+</div>
+
+<!-- ── OVERLAY ── -->
+<div id="sidebarOverlay" onclick="toggleSidebar()" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:998;"></div>
 
 <div class="sidebar" id="sidebar">
     <div class="sidebar-logo">
@@ -385,7 +392,6 @@ $icons = [
     
     <div class="header-section">
 
-    <!-- TITLE -->
     <div class="top-bar-flex">
         <div class="top-bar">
             <h1>Recipes For You</h1>
@@ -393,11 +399,9 @@ $icons = [
         </div>
     </div>
 
-    <!-- SEARCH -->
     <form method="GET" action="" id="filterForm">
         <div class="search-container">
             <i class="bi bi-search"></i>
-
             <input 
                 type="text"
                 id="searchInput"
@@ -405,18 +409,8 @@ $icons = [
                 placeholder="Search for inspiration..."
                 value="<?= htmlspecialchars($search) ?>"
             >
-
-            <input 
-                type="hidden" 
-                name="meal_type" 
-                value="<?= htmlspecialchars($meal_type) ?>"
-            >
-
-            <input 
-                type="hidden" 
-                name="cuisine" 
-                value="<?= htmlspecialchars($cuisine) ?>"
-            >
+            <input type="hidden" name="meal_type" value="<?= htmlspecialchars($meal_type) ?>">
+            <input type="hidden" name="cuisine" value="<?= htmlspecialchars($cuisine) ?>">
         </div>
 </div>
 
@@ -504,6 +498,31 @@ $icons = [
 <script>
     const isLoggedIn = <?= $isLoggedIn ? 'true' : 'false' ?>;
 
+    // ── Mobile sidebar ──
+    function toggleSidebar() {
+        const sidebar = document.getElementById('sidebar');
+        const overlay = document.getElementById('sidebarOverlay');
+        const icon    = document.getElementById('hamburgerIcon');
+        const isOpen  = sidebar.classList.toggle('open');
+        overlay.style.display = isOpen ? 'block' : 'none';
+        icon.className = isOpen ? 'bi bi-x-lg' : 'bi bi-list';
+    }
+
+    // Show topbar on mobile
+    function checkTopbar() {
+        document.getElementById('topbar').style.display = window.innerWidth <= 768 ? 'flex' : 'none';
+    }
+    checkTopbar();
+    window.addEventListener('resize', checkTopbar);
+
+    // Close sidebar on nav link click (mobile)
+    document.querySelectorAll('.sidebar-nav a').forEach(link => {
+        link.addEventListener('click', () => {
+            const sidebar = document.getElementById('sidebar');
+            if (sidebar.classList.contains('open')) toggleSidebar();
+        });
+    });
+
     async function toggleSave(event, recipeId) {
         event.preventDefault(); 
         event.stopPropagation();
@@ -523,7 +542,6 @@ $icons = [
                 body: formData
             });
 
-            // Sekarang guna FormData dan check status betul:
             const data = await response.json();
             if (data.status === 'saved') {
                 btn.classList.add('active');
@@ -535,7 +553,6 @@ $icons = [
         }
     }
 
-    // Auto submit search
     const searchInput = document.getElementById('searchInput');
     if (searchInput) {
         searchInput.addEventListener('input', function() {

@@ -14,7 +14,6 @@ $status  = $_GET['status'] ?? '';
 
 if (!$orderId) { header('Location: items.php'); exit; }
 
-// Nav info
 $nav_profile_img = "";
 $nav_role = "Customer";
 $username = 'Guest';
@@ -80,6 +79,7 @@ if ($status === 'cod') {
             padding: 2.5rem 1.5rem; z-index: 1000;
             display: flex; flex-direction: column;
             border-right: 1px solid rgba(255,255,255,0.05); overflow-y: auto;
+            transition: transform 0.3s ease;
         }
         .sidebar-logo h2 {
             font-family: 'Playfair Display', serif; font-weight: 900; letter-spacing: -1px;
@@ -112,10 +112,7 @@ if ($status === 'cod') {
 
         .result-wrap { width: 100%; max-width: 520px; padding: 2rem; }
 
-        .result-card {
-            background: white; border-radius: 28px; overflow: hidden;
-            box-shadow: 0 20px 60px rgba(0,0,0,0.08);
-        }
+        .result-card { background: white; border-radius: 28px; overflow: hidden; box-shadow: 0 20px 60px rgba(0,0,0,0.08); }
 
         .result-banner { padding: 2.5rem 2rem; text-align: center; }
         .result-banner.success { background: linear-gradient(135deg,#00b894,#00cec9); }
@@ -182,11 +179,27 @@ if ($status === 'cod') {
             margin-bottom: 1.2rem; text-align: center;
             border: 1px solid rgba(225,112,85,0.15);
         }
+
+        /* ── RESPONSIVE ── */
+        @media (max-width: 768px) {
+            .sidebar { transform: translateX(-100%); }
+            .sidebar.open { transform: translateX(0); }
+            .main-content { margin-left: 0 !important; padding-top: 5rem; }
+            .result-wrap { padding: 1.2rem; }
+        }
     </style>
 </head>
 <body>
 
-<div class="sidebar">
+<!-- ── TOPBAR (mobile) ── -->
+<div id="topbar" style="display:none;position:fixed;top:0;left:0;right:0;z-index:999;background:#1A1C1E;padding:1rem 1.5rem;align-items:center;justify-content:space-between;">
+    <span style="font-family:'Playfair Display',serif;font-weight:900;font-size:1.5rem;background:linear-gradient(135deg,#FF6B6B,#FF8E53);-webkit-background-clip:text;-webkit-text-fill-color:transparent;">foodify.</span>
+    <button onclick="toggleSidebar()" style="background:none;border:none;color:white;font-size:1.4rem;cursor:pointer;"><i class="bi bi-list" id="hamburgerIcon"></i></button>
+</div>
+
+<div id="sidebarOverlay" onclick="toggleSidebar()" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:998;"></div>
+
+<div class="sidebar" id="sidebar">
     <div class="sidebar-logo"><h2>foodify.</h2></div>
     <div class="sidebar-greet-box"><p><?= $isSuccess ? 'Thank you! ' : 'Something went wrong.' ?></p></div>
     <ul class="sidebar-nav">
@@ -222,7 +235,6 @@ if ($status === 'cod') {
 <div class="main-content">
     <div class="result-wrap">
         <div class="result-card">
-
             <div class="result-banner <?= $isSuccess ? 'success' : 'failed' ?>">
                 <div class="result-icon">
                     <i class="bi <?= $isSuccess ? 'bi-check-lg' : 'bi-x-lg' ?>"></i>
@@ -287,5 +299,28 @@ if ($status === 'cod') {
     </div>
 </div>
 
+<script>
+function toggleSidebar() {
+    const sidebar = document.getElementById('sidebar');
+    const overlay = document.getElementById('sidebarOverlay');
+    const icon    = document.getElementById('hamburgerIcon');
+    const isOpen  = sidebar.classList.toggle('open');
+    overlay.style.display = isOpen ? 'block' : 'none';
+    icon.className = isOpen ? 'bi bi-x-lg' : 'bi bi-list';
+}
+
+function checkTopbar() {
+    document.getElementById('topbar').style.display = window.innerWidth <= 768 ? 'flex' : 'none';
+}
+checkTopbar();
+window.addEventListener('resize', checkTopbar);
+
+document.querySelectorAll('.sidebar-nav a').forEach(link => {
+    link.addEventListener('click', () => {
+        const sidebar = document.getElementById('sidebar');
+        if (sidebar.classList.contains('open')) toggleSidebar();
+    });
+});
+</script>
 </body>
 </html>

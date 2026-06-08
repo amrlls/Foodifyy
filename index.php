@@ -123,7 +123,7 @@ if ($isLoggedIn) {
         .user-card img { transition: transform 0.3s ease; }
         .user-card:hover img { transform: rotate(5deg); }
 
-        /* Mobile */
+        /* ── TOPBAR (mobile only) ── */
         .topbar {
             display: none;
             position: fixed; top: 0; left: 0; right: 0; z-index: 999;
@@ -215,6 +215,7 @@ if ($isLoggedIn) {
             display: flex; flex-direction: column;
             box-shadow: 0 2px 12px rgba(0,0,0,0.04);
             cursor: pointer; width: 100%;
+            margin-bottom: 1.8rem;
         }
         .row.g-3 { align-items: stretch; }
         .row.g-3 > .col-sm-6 { display: flex; }
@@ -250,7 +251,7 @@ if ($isLoggedIn) {
             margin-left: 4px;
         }
 
-        /*  Mobile */
+        /* ── RESPONSIVE MOBILE ── */
         @media (max-width: 768px) {
             /* Show topbar, hide sidebar by default */
             .topbar { display: flex; }
@@ -290,7 +291,7 @@ if ($isLoggedIn) {
 </head>
 <body>
 
-<!-- Mobile -->
+<!-- ── TOPBAR (mobile) ── -->
 <div class="topbar">
     <span class="topbar-logo">foodify.</span>
     <button class="hamburger" onclick="toggleSidebar()">

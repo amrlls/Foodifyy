@@ -1,7 +1,6 @@
 <?php 
 session_start();
 
-// Database connection
 require_once __DIR__ . '/../../config/database.php';
 require_once __DIR__ . '/../../config/upload_helper.php';
 
@@ -13,7 +12,6 @@ if (!$isLoggedIn) {
     exit();
 }
 
-// --- LOGIC SIMPAN/UPDATE/DELETE ---
 if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['submit_recipe'])) {
     $title        = $_POST['title'];
     $cuisine      = $_POST['cuisine'];
@@ -63,11 +61,6 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['update_recipe'])) {
         $new_image = uploadToCloudinary($_FILES['recipe_image']['tmp_name'], 'foodify/user_recipes');
         $conn->ping();
 
-        // if ($new_image && !empty($old_image)) {
-        //     deleteFromCloudinary($old_image);
-        // }
-        
-
         if (!$new_image) {
             $ext = pathinfo($_FILES['recipe_image']['name'], PATHINFO_EXTENSION);
             $new_image = "user_" . time() . "." . $ext;
@@ -104,7 +97,6 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['delete_recipe'])) {
     }
 }
 
-// Fetch Navbar/Sidebar Data
 $stmt_nav = $conn->prepare("SELECT username, profile_image, role FROM users WHERE user_id = ?");
 $stmt_nav->bind_param("i", $userId);
 $stmt_nav->execute();
@@ -113,13 +105,11 @@ $username = $user_nav['username'] ?? 'Guest';
 $nav_profile_img = $user_nav['profile_image'] ?? '';
 $nav_role = $user_nav['role'] ?? 'Customer';
 
-// Fetch My Creations
 $stmt_my = $conn->prepare("SELECT * FROM created_recipes WHERE user_id = ? ORDER BY created_at DESC");
 $stmt_my->bind_param("i", $userId);
 $stmt_my->execute();
 $my_recipes = $stmt_my->get_result()->fetch_all(MYSQLI_ASSOC);
 
-// Fetch Saved Recipes
 $stmt_saved = $conn->prepare("
     SELECT r.*, 1 as is_saved FROM recipes r 
     JOIN saved_recipes s ON r.recipe_id = s.recipe_id 
@@ -172,6 +162,7 @@ $icons = [
             display: flex; flex-direction: column;
             border-right: 1px solid rgba(255,255,255,0.05);
             overflow-y: auto;
+            transition: transform 0.3s ease;
         }
         .sidebar-logo h2 {
             font-family: 'Playfair Display', serif; font-weight: 900;
@@ -190,17 +181,11 @@ $icons = [
             font-weight: 500; transition: all 0.3s ease;
         }
         .sidebar-nav a:hover { color: white; background: rgba(255,255,255,0.05); }
-        .sidebar-nav a.active {
-            background: var(--primary-grad); color: white;
-            box-shadow: 0 10px 20px rgba(255,107,107,0.25);
-        }
+        .sidebar-nav a.active { background: var(--primary-grad); color: white; box-shadow: 0 10px 20px rgba(255,107,107,0.25); }
         .sidebar-footer { padding-top: 2rem; border-top: 1px solid rgba(255,255,255,0.1); }
         .user-card { 
-            background: rgba(255,255,255,0.03); 
-            border: 1px solid rgba(255,255,255,0.08);
-            padding: 15px; border-radius: 20px;
-            transition: all 0.2s ease;
-            cursor: pointer;
+            background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.08);
+            padding: 15px; border-radius: 20px; transition: all 0.2s ease; cursor: pointer;
         }
         .user-card:hover { background: rgba(255,255,255,0.07); transform: translateY(-2px); }
         .user-card:active { transform: scale(0.95); background: rgba(255,255,255,0.1); }
@@ -217,7 +202,6 @@ $icons = [
         .btn-create { background: var(--primary-grad); color: white; border: none; padding: 14px 28px; border-radius: 100px; font-weight: 700; transition: 0.3s; box-shadow: 0 10px 20px rgba(255,107,107,0.2); }
         .btn-create:hover { transform: translateY(-3px); box-shadow: 0 15px 25px rgba(255,107,107,0.3); color: white; }
 
-        /* ── RECIPE CARDS ── */
         .recipe-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 2.5rem; }
         .recipe-card { background: white; border-radius: 30px; overflow: hidden; border: 1px solid #f8f9fa; transition: 0.4s; position: relative; height: 100%; box-shadow: 0 10px 30px rgba(0,0,0,0.03); }
         .recipe-card:hover { transform: translateY(-12px); box-shadow: 0 25px 50px rgba(0,0,0,0.08); }
@@ -230,25 +214,43 @@ $icons = [
         .card-content { padding: 1.5rem; }
         .card-cat { color: var(--accent); font-size: 0.75rem; font-weight: 800; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 0.5rem; display: block; }
         .card-title { font-weight: 800; font-size: 1.3rem; margin-bottom: 0.8rem; line-height: 1.3; }
-        .card-text { color: #7f8c8d; font-size: 0.9rem; line-height: 1.6; margin-bottom: 1.5rem; display: -webkit-box; -webkit-line-clamp: 2;line-clamp: 3;
- -webkit-box-orient: vertical; overflow: hidden; }
+        .card-text { color: #7f8c8d; font-size: 0.9rem; line-height: 1.6; margin-bottom: 1.5rem; display: -webkit-box; -webkit-line-clamp: 2; line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
         .card-meta { display: flex; justify-content: space-between; align-items: center; padding-top: 1.2rem; border-top: 1px solid #f8f9fa; }
         .meta-item { display: flex; align-items: center; gap: 8px; color: #bdc3c7; font-size: 0.85rem; font-weight: 700; }
         .meta-item i { color: #1A1C1E; }
 
-        /* MODALS */
         .modal-content { border-radius: 35px; border: none; padding: 1rem; }
         #confirmOverlay { position: fixed; inset: 0; background: rgba(0,0,0,0.6); backdrop-filter: blur(8px); z-index: 10000; display: none; align-items: center; justify-content: center; }
         .confirm-box { background: white; padding: 3rem; border-radius: 40px; width: 90%; max-width: 450px; text-align: center; box-shadow: 0 20px 60px rgba(0,0,0,0.2); }
 
-        /* Guidelines */
         .form-hint { font-size: 0.75rem; color: #aaa; margin-top: 5px; display: block; }
         .form-hint i { color: var(--accent); }
+
+        /* ── RESPONSIVE ── */
+        @media (max-width: 768px) {
+            .sidebar { transform: translateX(-100%); }
+            .sidebar.open { transform: translateX(0); }
+            .main-content { margin-left: 0 !important; padding: 1.2rem; padding-top: 5rem; }
+            .top-bar h1 { font-size: 2.2rem; }
+            .d-flex.justify-content-between { flex-direction: column; gap: 1rem; align-items: flex-start !important; }
+            .btn-create { width: 100%; text-align: center; justify-content: center; display: flex; }
+            .recipe-grid { grid-template-columns: 1fr; gap: 1.2rem; }
+            .section-header { font-size: 1.2rem; }
+        }
     </style>
 </head>
 <body>
 
-<div class="sidebar">
+<!-- ── TOPBAR (mobile) ── -->
+<div id="topbar" style="display:none;position:fixed;top:0;left:0;right:0;z-index:999;background:#1A1C1E;padding:1rem 1.5rem;align-items:center;justify-content:space-between;">
+    <span style="font-family:'Playfair Display',serif;font-weight:900;font-size:1.5rem;background:linear-gradient(135deg,#FF6B6B,#FF8E53);-webkit-background-clip:text;-webkit-text-fill-color:transparent;">foodify.</span>
+    <button onclick="toggleSidebar()" style="background:none;border:none;color:white;font-size:1.4rem;cursor:pointer;"><i class="bi bi-list" id="hamburgerIcon"></i></button>
+</div>
+
+<!-- ── OVERLAY ── -->
+<div id="sidebarOverlay" onclick="toggleSidebar()" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:998;"></div>
+
+<div class="sidebar" id="sidebar">
     <div class="sidebar-logo">
         <h2>foodify.</h2>
     </div>
@@ -302,7 +304,6 @@ $icons = [
         </button>
     </div>
 
-    <!-- Notifications -->
     <?php if (isset($_GET['success'])): ?>
         <div class="alert alert-success border-0 rounded-4 mt-4 shadow-sm">Recipe created successfully!</div>
     <?php endif; ?>
@@ -313,7 +314,6 @@ $icons = [
         <div class="alert alert-danger border-0 rounded-4 mt-4 shadow-sm">Recipe deleted successfully!</div>
     <?php endif; ?>
 
-    <!-- MY CREATIONS -->
     <div class="section-header">My Recipe Creations</div>
     <div class="recipe-grid">
         <?php foreach ($my_recipes as $recipe): 
@@ -351,7 +351,6 @@ $icons = [
         <?php endforeach; ?>
     </div>
 
-    <!-- SAVED FAVORITES -->
     <div class="section-header">Saved Recipes</div>
     <div class="recipe-grid">
         <?php foreach ($saved_recipes as $recipe): 
@@ -372,23 +371,16 @@ $icons = [
                         <span class="cuisine-badge"><?= $recipe['cuisine'] ?></span>
                     </div>
                     <div class="card-content">
-
-                    <div class="d-flex justify-content-between align-items-center mb-2">
-                        <span class="card-cat" style="margin-bottom:0;">
-                            <?= $recipe['meal_type'] ?>
-                        </span>
-
-                        <div class="meta-item">
-                            <i class="bi bi-stopwatch"></i>
-                            <?= htmlspecialchars($recipe['cooking_time'] ?? '20') ?> mins
+                        <div class="d-flex justify-content-between align-items-center mb-2">
+                            <span class="card-cat" style="margin-bottom:0;"><?= $recipe['meal_type'] ?></span>
+                            <div class="meta-item">
+                                <i class="bi bi-stopwatch"></i>
+                                <?= htmlspecialchars($recipe['cooking_time'] ?? '20') ?> mins
+                            </div>
                         </div>
+                        <h3 class="card-title"><?= $recipe['title'] ?></h3>
+                        <p class="card-text"><?= $recipe['description'] ?></p>
                     </div>
-
-    <h3 class="card-title"><?= $recipe['title'] ?></h3>
-
-    <p class="card-text"><?= $recipe['description'] ?></p>
-
-</div>
                 </a>
             </div>
         <?php endforeach; ?>
@@ -551,6 +543,29 @@ $icons = [
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 <script>
+    // ── Mobile sidebar ──
+    function toggleSidebar() {
+        const sidebar = document.getElementById('sidebar');
+        const overlay = document.getElementById('sidebarOverlay');
+        const icon    = document.getElementById('hamburgerIcon');
+        const isOpen  = sidebar.classList.toggle('open');
+        overlay.style.display = isOpen ? 'block' : 'none';
+        icon.className = isOpen ? 'bi bi-x-lg' : 'bi bi-list';
+    }
+
+    function checkTopbar() {
+        document.getElementById('topbar').style.display = window.innerWidth <= 768 ? 'flex' : 'none';
+    }
+    checkTopbar();
+    window.addEventListener('resize', checkTopbar);
+
+    document.querySelectorAll('.sidebar-nav a').forEach(link => {
+        link.addEventListener('click', () => {
+            const sidebar = document.getElementById('sidebar');
+            if (sidebar.classList.contains('open')) toggleSidebar();
+        });
+    });
+
     function openEditModal(recipe) {
         document.getElementById('edit_cr_id').value = recipe.cr_id;
         document.getElementById('edit_title').value = recipe.title;
@@ -589,7 +604,6 @@ $icons = [
         } catch (e) { console.log(e); }
     }
 
-    // Auto hide alerts after 3 seconds
     document.querySelectorAll('.alert').forEach(function(alert) {
         setTimeout(function() {
             alert.style.transition = 'opacity 0.5s';

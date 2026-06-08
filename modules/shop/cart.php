@@ -10,10 +10,8 @@ if (!isset($_SESSION['user_id'])) {
 
 $userId = $_SESSION['user_id'];
 
-// Handle AJAX requests
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
     header('Content-Type: application/json');
-
     $cartId = intval($_POST['cart_id'] ?? 0);
     $action = $_POST['action'];
 
@@ -26,7 +24,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
         } else {
             echo json_encode(['status' => 'error']);
         }
-
     } elseif ($action === 'remove') {
         if ($cartId) {
             $stmt = $conn->prepare("DELETE FROM cart WHERE id = ? AND user_id = ?");
@@ -53,7 +50,6 @@ if ($user_nav) {
     $nav_role        = $user_nav['role'];
 }
 
-// Fetch cart items
 $stmt = $conn->prepare("
     SELECT c.id as cart_id, c.quantity, 
            i.item_id, i.name, i.price, i.image, i.category, i.unit, i.stock
@@ -66,7 +62,7 @@ $stmt->bind_param("i", $userId);
 $stmt->execute();
 $cartItems = $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
 
-$subtotal = array_sum(array_map(fn($r) => $r['price'] * $r['quantity'], $cartItems));
+$subtotal  = array_sum(array_map(fn($r) => $r['price'] * $r['quantity'], $cartItems));
 $cartCount = array_sum(array_column($cartItems, 'quantity'));
 
 $catColors = [
@@ -90,156 +86,92 @@ $catColors = [
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
     <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;600;700;800&family=Playfair+Display:wght@700;900&display=swap" rel="stylesheet">
     <style>
-        :root {
-            --primary-grad: linear-gradient(135deg, #FF6B6B 0%, #FF8E53 100%);
-            --sidebar-dark: #1A1C1E;
-            --accent: #FF8E53;
-            --soft-bg: #fdfdfd;
-            --sidebar-w: 280px;
-            --card-shadow: 0 10px 30px rgba(0,0,0,0.06);
-        }
+        :root { --primary-grad: linear-gradient(135deg, #FF6B6B 0%, #FF8E53 100%); --sidebar-dark: #1A1C1E; --accent: #FF8E53; --soft-bg: #fdfdfd; --sidebar-w: 280px; --card-shadow: 0 10px 30px rgba(0,0,0,0.06); }
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body { font-family: 'Plus Jakarta Sans', sans-serif; background: var(--soft-bg); color: #1A1C1E; overflow-x: hidden; }
 
-        /* Sidebar — same as items.php */
-        .sidebar {
-            position: fixed; left: 0; top: 0; width: var(--sidebar-w); height: 100vh;
-            background: var(--sidebar-dark); color: white;
-            padding: 2.5rem 1.5rem; z-index: 1000;
-            display: flex; flex-direction: column;
-            border-right: 1px solid rgba(255,255,255,0.05); overflow-y: auto;
-        }
-        .sidebar-logo h2 {
-            font-family: 'Playfair Display', serif; font-weight: 900; letter-spacing: -1px;
-            background: var(--primary-grad); background-clip: text;
-            -webkit-background-clip: text; -webkit-text-fill-color: transparent;
-            margin-bottom: 0.5rem; padding-left: 1rem;
-        }
+        .sidebar { position: fixed; left: 0; top: 0; width: var(--sidebar-w); height: 100vh; background: var(--sidebar-dark); color: white; padding: 2.5rem 1.5rem; z-index: 1000; display: flex; flex-direction: column; border-right: 1px solid rgba(255,255,255,0.05); overflow-y: auto; transition: transform 0.3s ease; }
+        .sidebar-logo h2 { font-family: 'Playfair Display', serif; font-weight: 900; letter-spacing: -1px; background: var(--primary-grad); background-clip: text; -webkit-background-clip: text; -webkit-text-fill-color: transparent; margin-bottom: 0.5rem; padding-left: 1rem; }
         .sidebar-greet-box { padding-left: 1rem; margin-bottom: 3rem; }
         .sidebar-greet-box p { color: #949494; font-size: 0.8rem; margin: 0; }
         .sidebar-nav { list-style: none; padding: 0; flex-grow: 1; }
         .sidebar-nav li { margin-bottom: 0.5rem; }
-        .sidebar-nav a {
-            display: flex; align-items: center; gap: 15px; padding: 14px 18px;
-            color: #949494; text-decoration: none; border-radius: 16px;
-            font-weight: 500; transition: all 0.3s;
-        }
+        .sidebar-nav a { display: flex; align-items: center; gap: 15px; padding: 14px 18px; color: #949494; text-decoration: none; border-radius: 16px; font-weight: 500; transition: all 0.3s; }
         .sidebar-nav a:hover { color: white; background: rgba(255,255,255,0.05); }
         .sidebar-nav a.active { background: var(--primary-grad); color: white; box-shadow: 0 10px 20px rgba(255,107,107,0.25); }
         .sidebar-footer { padding-top: 2rem; border-top: 1px solid rgba(255,255,255,0.1); }
-        .user-card {
-            background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.08);
-            padding: 15px; border-radius: 20px; transition: all 0.2s; cursor: pointer;
-        }
+        .user-card { background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.08); padding: 15px; border-radius: 20px; transition: all 0.2s; cursor: pointer; }
         .user-card:hover { background: rgba(255,255,255,0.07); transform: translateY(-2px); }
 
-        /* Main */
         .main-content { margin-left: var(--sidebar-w); padding: 0; min-height: 100vh; }
         .header-section { padding: 3rem 4rem 2rem; background: white; border-bottom: 1px solid #f5f5f5; }
-        .header-section h1 {
-            font-family: 'Playfair Display', serif; font-size: 3rem; font-weight: 900; color: #1A1C1E;
-        }
+        .header-section h1 { font-family: 'Playfair Display', serif; font-size: 3rem; font-weight: 900; color: #1A1C1E; }
         .header-section p { color: #7f8c8d; font-size: 1rem; margin-top: 0.5rem; }
-
         .content-body { padding: 2.5rem 4rem; background: #fdfdfd; }
 
-        /* Cart item row */
-        .cart-item {
-            background: white; border-radius: 20px; padding: 1.2rem 1.4rem;
-            display: flex; align-items: center; gap: 1.2rem;
-            border: 1px solid #f0f0f0; box-shadow: var(--card-shadow);
-            transition: 0.3s;
-        }
+        .cart-item { background: white; border-radius: 20px; padding: 1.2rem 1.4rem; display: flex; align-items: center; gap: 1.2rem; border: 1px solid #f0f0f0; box-shadow: var(--card-shadow); transition: 0.3s; }
         .cart-item:hover { box-shadow: 0 16px 36px rgba(0,0,0,0.08); transform: translateY(-2px); }
-
-        .item-img {
-            width: 72px; height: 72px; border-radius: 14px; overflow: hidden;
-            flex-shrink: 0; display: flex; align-items: center; justify-content: center;
-        }
+        .item-img { width: 72px; height: 72px; border-radius: 14px; overflow: hidden; flex-shrink: 0; display: flex; align-items: center; justify-content: center; }
         .item-img img { width: 100%; height: 100%; object-fit: cover; }
         .item-img i { font-size: 1.8rem; color: white; }
-
         .item-info { flex-grow: 1; min-width: 0; }
         .item-name { font-weight: 800; font-size: 0.95rem; color: #1A1C1E; margin-bottom: 3px; }
         .item-cat  { font-size: 0.72rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; color: #bdc3c7; }
-
-        .item-price {
-            font-size: 1rem; font-weight: 800;
-            background: var(--primary-grad); background-clip: text;
-            -webkit-background-clip: text; -webkit-text-fill-color: transparent;
-            white-space: nowrap;
-        }
-
-        /* Qty control */
+        .item-price { font-size: 1rem; font-weight: 800; background: var(--primary-grad); background-clip: text; -webkit-background-clip: text; -webkit-text-fill-color: transparent; white-space: nowrap; }
         .qty-control { display: flex; align-items: center; gap: 10px; }
-        .qty-btn {
-            width: 34px; height: 34px; border-radius: 10px; border: 1.5px solid #eee;
-            background: white; color: #1A1C1E; font-size: 1rem; font-weight: 700;
-            cursor: pointer; transition: 0.2s; display: flex; align-items: center; justify-content: center;
-        }
+        .qty-btn { width: 34px; height: 34px; border-radius: 10px; border: 1.5px solid #eee; background: white; color: #1A1C1E; font-size: 1rem; font-weight: 700; cursor: pointer; transition: 0.2s; display: flex; align-items: center; justify-content: center; }
         .qty-btn:hover { background: #1A1C1E; color: white; border-color: #1A1C1E; }
         .qty-num { font-weight: 800; font-size: 0.95rem; min-width: 24px; text-align: center; }
-
-        /* Remove btn */
-        .btn-remove {
-            background: none; border: none; color: #dfe6e9;
-            cursor: pointer; transition: 0.2s; padding: 6px;
-            border-radius: 8px;
-        }
+        .btn-remove { background: none; border: none; color: #dfe6e9; cursor: pointer; transition: 0.2s; padding: 6px; border-radius: 8px; }
         .btn-remove:hover { color: #e17055; background: #fff5f3; }
 
-        /* Summary card */
-        .summary-card {
-            background: white; border-radius: 24px; padding: 2rem;
-            border: 1px solid #f0f0f0; box-shadow: var(--card-shadow);
-            position: sticky; top: 2rem;
-        }
+        .summary-card { background: white; border-radius: 24px; padding: 2rem; border: 1px solid #f0f0f0; box-shadow: var(--card-shadow); position: sticky; top: 2rem; }
         .summary-card h5 { font-weight: 800; font-size: 1.1rem; margin-bottom: 1.5rem; }
         .summary-row { display: flex; justify-content: space-between; margin-bottom: 0.8rem; font-size: 0.9rem; }
         .summary-row span:first-child { color: #7f8c8d; }
         .summary-row span:last-child  { font-weight: 700; }
         .summary-divider { border: none; border-top: 1px solid #f5f5f5; margin: 1.2rem 0; }
         .summary-total { font-size: 1.2rem; font-weight: 800; }
-        .summary-total span:last-child {
-            background: var(--primary-grad); background-clip: text;
-            -webkit-background-clip: text; -webkit-text-fill-color: transparent;
-        }
-
-        .btn-checkout {
-            width: 100%; padding: 14px; border: none; border-radius: 16px;
-            background: var(--primary-grad); color: white;
-            font-weight: 800; font-size: 0.95rem;
-            font-family: 'Plus Jakarta Sans', sans-serif;
-            cursor: pointer; transition: 0.3s; margin-top: 1.5rem;
-            display: flex; align-items: center; justify-content: center; gap: 8px;
-        }
+        .summary-total span:last-child { background: var(--primary-grad); background-clip: text; -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+        .btn-checkout { width: 100%; padding: 14px; border: none; border-radius: 16px; background: var(--primary-grad); color: white; font-weight: 800; font-size: 0.95rem; font-family: 'Plus Jakarta Sans', sans-serif; cursor: pointer; transition: 0.3s; margin-top: 1.5rem; display: flex; align-items: center; justify-content: center; gap: 8px; }
         .btn-checkout:hover { opacity: 0.88; box-shadow: 0 10px 28px rgba(255,107,107,0.3); transform: translateY(-2px); }
-
-        .btn-continue {
-            width: 100%; padding: 12px; border: 1.5px solid #eee; border-radius: 16px;
-            background: white; color: #1A1C1E;
-            font-weight: 700; font-size: 0.9rem;
-            font-family: 'Plus Jakarta Sans', sans-serif;
-            cursor: pointer; transition: 0.3s; margin-top: 0.8rem;
-            text-align: center; text-decoration: none; display: block;
-        }
+        .btn-continue { width: 100%; padding: 12px; border: 1.5px solid #eee; border-radius: 16px; background: white; color: #1A1C1E; font-weight: 700; font-size: 0.9rem; font-family: 'Plus Jakarta Sans', sans-serif; cursor: pointer; transition: 0.3s; margin-top: 0.8rem; text-align: center; text-decoration: none; display: block; }
         .btn-continue:hover { border-color: #1A1C1E; color: #1A1C1E; }
-
-        /* Empty state */
         .empty-state { text-align: center; padding: 5rem 2rem; }
         .empty-state i { font-size: 4rem; color: #eee; display: block; margin-bottom: 1.5rem; }
         .empty-state h4 { font-weight: 800; color: #1A1C1E; margin-bottom: 0.5rem; }
         .empty-state p  { color: #bdc3c7; font-size: 0.9rem; }
 
+        /* ── RESPONSIVE ── */
         @media (max-width: 992px) {
             .header-section, .content-body { padding: 2rem; }
+        }
+
+        @media (max-width: 768px) {
+            .sidebar { transform: translateX(-100%); }
+            .sidebar.open { transform: translateX(0); }
+            .main-content { margin-left: 0 !important; padding-top: 5rem; }
+            .header-section, .content-body { padding: 1.2rem; }
+            .header-section h1 { font-size: 2rem; }
+            .cart-item { flex-wrap: wrap; gap: 0.8rem; }
+            .item-info { width: calc(100% - 90px); }
+            .qty-control { margin-left: 90px; }
+            .item-price { margin-left: auto; }
+            .summary-card { position: static; margin-top: 1.5rem; }
         }
     </style>
 </head>
 <body>
 
-<!-- Sidebar -->
-<div class="sidebar">
+<!-- ── TOPBAR (mobile) ── -->
+<div id="topbar" style="display:none;position:fixed;top:0;left:0;right:0;z-index:999;background:#1A1C1E;padding:1rem 1.5rem;align-items:center;justify-content:space-between;">
+    <span style="font-family:'Playfair Display',serif;font-weight:900;font-size:1.5rem;background:linear-gradient(135deg,#FF6B6B,#FF8E53);-webkit-background-clip:text;-webkit-text-fill-color:transparent;">foodify.</span>
+    <button onclick="toggleSidebar()" style="background:none;border:none;color:white;font-size:1.4rem;cursor:pointer;"><i class="bi bi-list" id="hamburgerIcon"></i></button>
+</div>
+
+<div id="sidebarOverlay" onclick="toggleSidebar()" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:998;"></div>
+
+<div class="sidebar" id="sidebar">
     <div class="sidebar-logo"><h2>foodify.</h2></div>
     <div class="sidebar-greet-box"><p>Review your bag.</p></div>
     <ul class="sidebar-nav">
@@ -272,7 +204,6 @@ $catColors = [
     </div>
 </div>
 
-<!-- Main -->
 <div class="main-content">
     <div class="header-section">
         <h1>Your Bag</h1>
@@ -285,22 +216,18 @@ $catColors = [
                 <i class="bi bi-bag-x"></i>
                 <h4>Your bag is empty</h4>
                 <p>Add some fresh groceries to get started.</p>
-                <a href="items.php" class="btn mt-3 px-4 py-2 fw-bold text-white" style="background:var(--primary-grad);border-radius:14px;">
-                    Browse Market
-                </a>
+                <a href="items.php" class="btn mt-3 px-4 py-2 fw-bold text-white" style="background:var(--primary-grad);border-radius:14px;">Browse Market</a>
             </div>
         <?php else: ?>
             <div class="row g-4">
-                <!-- Cart items list -->
                 <div class="col-lg-8">
                     <div class="d-flex flex-column gap-3" id="cartList">
                         <?php foreach ($cartItems as $row):
-                            $grad   = $catColors[$row['category']] ?? 'linear-gradient(135deg,#2D3436,#000)';
-                            $imgSrc = getImageSrc($row['image'] ?? '', '../../assets/images/items/');
+                            $grad      = $catColors[$row['category']] ?? 'linear-gradient(135deg,#2D3436,#000)';
+                            $imgSrc    = getImageSrc($row['image'] ?? '', '../../assets/images/items/');
                             $lineTotal = $row['price'] * $row['quantity'];
                         ?>
                         <div class="cart-item" id="row-<?= $row['cart_id'] ?>">
-                            <!-- Image -->
                             <div class="item-img" style="background:<?= $grad ?>;">
                                 <?php if ($imgSrc): ?>
                                     <img src="<?= htmlspecialchars($imgSrc) ?>" alt="<?= htmlspecialchars($row['name']) ?>">
@@ -308,26 +235,16 @@ $catColors = [
                                     <i class="bi bi-bag"></i>
                                 <?php endif; ?>
                             </div>
-
-                            <!-- Info -->
                             <div class="item-info">
                                 <div class="item-name"><?= htmlspecialchars($row['name']) ?></div>
                                 <div class="item-cat"><?= htmlspecialchars($row['category']) ?><?= $row['unit'] ? ' · per ' . htmlspecialchars($row['unit']) : '' ?></div>
                             </div>
-
-                            <!-- Qty control -->
                             <div class="qty-control">
                                 <button class="qty-btn" onclick="updateQty(<?= $row['cart_id'] ?>, -1)">−</button>
                                 <span class="qty-num" id="qty-<?= $row['cart_id'] ?>"><?= $row['quantity'] ?></span>
                                 <button class="qty-btn" onclick="updateQty(<?= $row['cart_id'] ?>, 1)">+</button>
                             </div>
-
-                            <!-- Line total -->
-                            <div class="item-price" id="linetotal-<?= $row['cart_id'] ?>">
-                                RM <?= number_format($lineTotal, 2) ?>
-                            </div>
-
-                            <!-- Remove -->
+                            <div class="item-price" id="linetotal-<?= $row['cart_id'] ?>">RM <?= number_format($lineTotal, 2) ?></div>
                             <button class="btn-remove" onclick="removeItem(<?= $row['cart_id'] ?>)" title="Remove">
                                 <i class="bi bi-trash3 fs-5"></i>
                             </button>
@@ -335,12 +252,9 @@ $catColors = [
                         <?php endforeach; ?>
                     </div>
                 </div>
-
-                <!-- Summary -->
                 <div class="col-lg-4">
                     <div class="summary-card">
                         <h5>Order Summary</h5>
-
                         <div class="summary-row">
                             <span>Subtotal (<span id="itemCount"><?= $cartCount ?></span> items)</span>
                             <span id="subtotalVal">RM <?= number_format($subtotal, 2) ?></span>
@@ -349,14 +263,11 @@ $catColors = [
                             <span>Delivery</span>
                             <span>RM 3.50</span>
                         </div>
-
                         <hr class="summary-divider">
-
                         <div class="summary-row summary-total">
                             <span>Total</span>
                             <span id="totalVal">RM <?= number_format($subtotal + 3.50, 2) ?></span>
                         </div>
-
                         <button class="btn-checkout" onclick="window.location.href='checkout.php'">
                             <i class="bi bi-lock-fill"></i> Proceed to Checkout
                         </button>
@@ -377,6 +288,28 @@ const prices = {
     <?php endforeach; ?>
 };
 
+function toggleSidebar() {
+    const sidebar = document.getElementById('sidebar');
+    const overlay = document.getElementById('sidebarOverlay');
+    const icon    = document.getElementById('hamburgerIcon');
+    const isOpen  = sidebar.classList.toggle('open');
+    overlay.style.display = isOpen ? 'block' : 'none';
+    icon.className = isOpen ? 'bi bi-x-lg' : 'bi bi-list';
+}
+
+function checkTopbar() {
+    document.getElementById('topbar').style.display = window.innerWidth <= 768 ? 'flex' : 'none';
+}
+checkTopbar();
+window.addEventListener('resize', checkTopbar);
+
+document.querySelectorAll('.sidebar-nav a').forEach(link => {
+    link.addEventListener('click', () => {
+        const sidebar = document.getElementById('sidebar');
+        if (sidebar.classList.contains('open')) toggleSidebar();
+    });
+});
+
 async function updateQty(cartId, delta) {
     const qtyEl = document.getElementById('qty-' + cartId);
     let qty = parseInt(qtyEl.textContent) + delta;
@@ -391,8 +324,7 @@ async function updateQty(cartId, delta) {
     const data = await res.json();
     if (data.status === 'success') {
         qtyEl.textContent = qty;
-        document.getElementById('linetotal-' + cartId).textContent =
-            'RM ' + (prices[cartId] * qty).toFixed(2);
+        document.getElementById('linetotal-' + cartId).textContent = 'RM ' + (prices[cartId] * qty).toFixed(2);
         recalcTotal();
     }
 }
@@ -413,8 +345,7 @@ async function removeItem(cartId) {
 }
 
 function recalcTotal() {
-    let sub = 0;
-    let totalQty = 0;
+    let sub = 0, totalQty = 0;
     document.querySelectorAll('[id^="qty-"]').forEach(el => {
         const cid = el.id.replace('qty-', '');
         const qty = parseInt(el.textContent);

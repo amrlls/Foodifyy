@@ -1,21 +1,16 @@
 <?php
-/**
- * payment_callback.php
- * ToyyibPay akan POST ke sini selepas payment selesai (server-side)
- * AKTIFKAN bila deploy ke Hostinger — tukar TOYYIBPAY_CALLBACK_URL dalam config/toyyibpay.php
- */
 
 require_once __DIR__ . '/../../config/database.php';
 
 // ToyyibPay POST parameters
 $refNo      = $_POST['refno']      ?? '';
-$orderId    = $_POST['order_id']   ?? ''; // dari billExternalReferenceNo — kita set 'ORDER-{id}'
+$orderId    = $_POST['order_id']   ?? ''; 
 $status     = $_POST['status']     ?? ''; // 1 = success, 2 = pending, 3 = fail
 $reason     = $_POST['reason']     ?? '';
 $billCode   = $_POST['billcode']   ?? '';
 $amount     = $_POST['amount']     ?? 0;
 
-// Log untuk debug (buang bila production)
+
 file_put_contents(__DIR__ . '/callback_log.txt',
     date('Y-m-d H:i:s') . " | orderId: $orderId | status: $status | refNo: $refNo\n",
     FILE_APPEND

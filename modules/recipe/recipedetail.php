@@ -87,6 +87,7 @@ $embedUrl = (!empty($videoUrl) && str_contains($videoUrl, 'cloudinary.com')) ? $
             display: flex; flex-direction: column;
             border-right: 1px solid rgba(255,255,255,0.05);
             overflow-y: auto;
+            transition: transform 0.3s ease;
         }
         .sidebar-logo h2 {
             font-family: 'Playfair Display', serif; font-weight: 900;
@@ -110,29 +111,16 @@ $embedUrl = (!empty($videoUrl) && str_contains($videoUrl, 'cloudinary.com')) ? $
             box-shadow: 0 10px 20px rgba(255,107,107,0.25);
         }
         .sidebar-footer { padding-top: 2rem; border-top: 1px solid rgba(255,255,255,0.1); }
-
         .user-card {
-        background: rgba(255,255,255,0.03);
-        border: 1px solid rgba(255,255,255,0.08);
-        padding: 15px;
-        border-radius: 20px;
-        transition: all 0.2s ease;
-        cursor: pointer;
+            background: rgba(255,255,255,0.03);
+            border: 1px solid rgba(255,255,255,0.08);
+            padding: 15px; border-radius: 20px;
+            transition: all 0.2s ease; cursor: pointer;
         }
-        .user-card:hover {
-            background: rgba(255,255,255,0.07);
-            transform: translateY(-2px);
-        }
-        .user-card:active {
-            transform: scale(0.95);
-            background: rgba(255,255,255,0.1);
-        }
-        .user-card img {
-            transition: transform 0.3s ease;
-        }
-        .user-card:hover img {
-            transform: rotate(5deg);
-        }
+        .user-card:hover { background: rgba(255,255,255,0.07); transform: translateY(-2px); }
+        .user-card:active { transform: scale(0.95); background: rgba(255,255,255,0.1); }
+        .user-card img { transition: transform 0.3s ease; }
+        .user-card:hover img { transform: rotate(5deg); }
 
         /* ── MAIN CONTENT ── */
         .main-content { margin-left: var(--sidebar-w); padding: 2rem; min-height: 100vh; }
@@ -159,7 +147,6 @@ $embedUrl = (!empty($videoUrl) && str_contains($videoUrl, 'cloudinary.com')) ? $
         .recipe-img-box { height: 280px; display: flex; align-items: center; justify-content: center; }
         .recipe-img-box img { width: 100%; height: 100%; object-fit: cover; }
 
-        /* ── VIDEO SECTION (SIZE MAINTAINED) ── */
         .video-container { background: white; border-radius: 24px; overflow: hidden; box-shadow: 0 4px 12px rgba(0,0,0,0.08); }
         .video-player { background: #1a1a1a; aspect-ratio: 16/9; display: flex; align-items: center; justify-content: center; }
         .video-player i { font-size: 4rem; color: white; opacity: 0.8; }
@@ -172,9 +159,28 @@ $embedUrl = (!empty($videoUrl) && str_contains($videoUrl, 'cloudinary.com')) ? $
         .info-card { background: white; border-radius: 20px; padding: 1.5rem; margin-bottom: 2rem; box-shadow: 0 4px 12px rgba(0,0,0,0.03); }
         .section-title { font-weight: 800; border-bottom: 3px solid var(--accent); display: inline-block; margin-bottom: 1.2rem; padding-bottom: 4px; }
         .step-num { width: 28px; height: 28px; background: var(--primary-grad); color: white; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; font-size: 0.8rem; font-weight: bold; margin-right: 10px; flex-shrink: 0; }
+
+        /* ── RESPONSIVE ── */
+        @media (max-width: 768px) {
+            .sidebar { transform: translateX(-100%); }
+            .sidebar.open { transform: translateX(0); }
+            .main-content { margin-left: 0 !important; padding: 1.2rem; padding-top: 5rem; }
+            .recipe-layout { grid-template-columns: 1fr; gap: 1rem; }
+            .recipe-img-box { height: 220px; }
+            .btn-back { margin-bottom: 1rem; }
+        }
     </style>
 </head>
 <body>
+
+<!-- ── TOPBAR (mobile) ── -->
+<div id="topbar" style="display:none;position:fixed;top:0;left:0;right:0;z-index:999;background:#1A1C1E;padding:1rem 1.5rem;align-items:center;justify-content:space-between;">
+    <span style="font-family:'Playfair Display',serif;font-weight:900;font-size:1.5rem;background:linear-gradient(135deg,#FF6B6B,#FF8E53);-webkit-background-clip:text;-webkit-text-fill-color:transparent;">foodify.</span>
+    <button onclick="toggleSidebar()" style="background:none;border:none;color:white;font-size:1.4rem;cursor:pointer;"><i class="bi bi-list" id="hamburgerIcon"></i></button>
+</div>
+
+<!-- ── OVERLAY ── -->
+<div id="sidebarOverlay" onclick="toggleSidebar()" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:998;"></div>
 
 <div class="sidebar" id="sidebar">
     <div class="sidebar-logo">
@@ -256,7 +262,6 @@ $embedUrl = (!empty($videoUrl) && str_contains($videoUrl, 'cloudinary.com')) ? $
             </div>
         </div>
 
-        <!-- VIDEO SECTION (MAINTAINED) -->
         <div class="video-container">
             <?php if ($type === 'user'): ?>
                 <div class="video-player" style="background: var(--primary-grad);">
@@ -313,6 +318,30 @@ $embedUrl = (!empty($videoUrl) && str_contains($videoUrl, 'cloudinary.com')) ? $
 
 <script>
     const isLoggedIn = <?= $isLoggedIn ? 'true' : 'false' ?>;
+
+    // ── Mobile sidebar ──
+    function toggleSidebar() {
+        const sidebar = document.getElementById('sidebar');
+        const overlay = document.getElementById('sidebarOverlay');
+        const icon    = document.getElementById('hamburgerIcon');
+        const isOpen  = sidebar.classList.toggle('open');
+        overlay.style.display = isOpen ? 'block' : 'none';
+        icon.className = isOpen ? 'bi bi-x-lg' : 'bi bi-list';
+    }
+
+    function checkTopbar() {
+        document.getElementById('topbar').style.display = window.innerWidth <= 768 ? 'flex' : 'none';
+    }
+    checkTopbar();
+    window.addEventListener('resize', checkTopbar);
+
+    document.querySelectorAll('.sidebar-nav a').forEach(link => {
+        link.addEventListener('click', () => {
+            const sidebar = document.getElementById('sidebar');
+            if (sidebar.classList.contains('open')) toggleSidebar();
+        });
+    });
+
     async function toggleSave(event, recipeId) {
         event.preventDefault();
         if (!isLoggedIn) { window.location.href = '../auth/login.php'; return; }
