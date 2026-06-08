@@ -51,7 +51,6 @@ $sql_items = "SELECT * FROM items LIMIT 8";
 $res_items = $conn->query($sql_items);
 $items = $res_items->fetch_all(MYSQLI_ASSOC);
 
-// Cart count untuk floating badge
 $cartCount = 0;
 if ($isLoggedIn) {
     $stmt_cart = $conn->prepare("SELECT SUM(quantity) as total FROM cart WHERE user_id = ?");
@@ -87,12 +86,14 @@ if ($isLoggedIn) {
             overflow-x: hidden;
         }
 
+        /* ── SIDEBAR ── */
         .sidebar {
             position: fixed; left: 0; top: 0; width: var(--sidebar-w); height: 100vh;
             background: var(--sidebar-dark); color: white;
             padding: 2.5rem 1.5rem; z-index: 1000;
             display: flex; flex-direction: column;
             border-right: 1px solid rgba(255,255,255,0.05);
+            transition: transform 0.3s ease;
         }
         .sidebar-logo h2 { 
             font-family: 'Playfair Display', serif; font-weight: 900; 
@@ -122,6 +123,32 @@ if ($isLoggedIn) {
         .user-card img { transition: transform 0.3s ease; }
         .user-card:hover img { transform: rotate(5deg); }
 
+        /* Mobile */
+        .topbar {
+            display: none;
+            position: fixed; top: 0; left: 0; right: 0; z-index: 999;
+            background: var(--sidebar-dark); padding: 1rem 1.5rem;
+            align-items: center; justify-content: space-between;
+        }
+        .topbar-logo {
+            font-family: 'Playfair Display', serif; font-weight: 900;
+            font-size: 1.5rem; letter-spacing: -1px;
+            background: var(--primary-grad); background-clip: text;
+            -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+        }
+        .hamburger {
+            background: none; border: none; color: white;
+            font-size: 1.4rem; cursor: pointer; padding: 4px;
+        }
+
+        /* ── OVERLAY ── */
+        .sidebar-overlay {
+            display: none; position: fixed; inset: 0;
+            background: rgba(0,0,0,0.5); z-index: 998;
+        }
+        .sidebar-overlay.active { display: block; }
+
+        /* ── MAIN CONTENT ── */
         .main-content { margin-left: var(--sidebar-w); padding: 2rem 3rem; }
 
         .hero-banner {
@@ -155,9 +182,8 @@ if ($isLoggedIn) {
             letter-spacing: -0.5px; color: #1A1C1E; transition: color 0.3s ease;
         }
         .recipe-item:hover h5 { color: #FF6B6B; }
-
         .recipe-item p {
-             display: -webkit-box;
+            display: -webkit-box;
             -webkit-line-clamp: 2;
             -webkit-box-orient: vertical;
             overflow: hidden;
@@ -188,33 +214,14 @@ if ($isLoggedIn) {
             overflow: hidden; transition: 0.3s; height: 100%;
             display: flex; flex-direction: column;
             box-shadow: 0 2px 12px rgba(0,0,0,0.04);
-            cursor: pointer;
-             margin-bottom: 1.8rem;
-             
+            cursor: pointer; width: 100%;
         }
-        .row.g-3 {
-            align-items: stretch;
-        }
-
-        .row.g-3 > .col-sm-6 {
-            display: flex;
-        }
-
-        .grocery-card {
-            width: 100%;
-        }
+        .row.g-3 { align-items: stretch; }
+        .row.g-3 > .col-sm-6 { display: flex; }
         .grocery-card:hover { box-shadow: 0 16px 36px rgba(0,0,0,0.1); transform: translateY(-4px); }
-        .grocery-card:hover .product-img-wrapper img { transform: scale(1.06); }
-        .grocery-card-img {
-            position: relative; height: 130px; overflow: hidden;
-        }
-        .grocery-card-img img {
-            width: 100%; height: 100%; object-fit: cover; transition: 0.5s ease;
-        }
-        .grocery-card-body {
-            padding: 0.9rem 1rem 1rem;
-            display: flex; flex-direction: column; flex-grow: 1;
-        }
+        .grocery-card-img { position: relative; height: 130px; overflow: hidden; }
+        .grocery-card-img img { width: 100%; height: 100%; object-fit: cover; transition: 0.5s ease; }
+        .grocery-card-body { padding: 0.9rem 1rem 1rem; display: flex; flex-direction: column; flex-grow: 1; }
         .grocery-price {
             font-size: 1rem; font-weight: 800;
             background: var(--primary-grad); background-clip: text;
@@ -232,7 +239,7 @@ if ($isLoggedIn) {
         .floating-cart {
             background: var(--sidebar-dark); padding: 1rem 1.8rem;
             border-radius: 50px; box-shadow: 0 10px 30px rgba(0,0,0,0.2);
-            z-index: 999; bottom: 30px; right: 30px; transition: 0.3s;
+            z-index: 997; bottom: 30px; right: 30px; transition: 0.3s;
         }
         .floating-cart:hover { background: #2d2f31; transform: translateY(-3px); }
         .cart-badge-pill {
@@ -242,12 +249,60 @@ if ($isLoggedIn) {
             display: inline-flex; align-items: center; justify-content: center;
             margin-left: 4px;
         }
+
+        /*  Mobile */
+        @media (max-width: 768px) {
+            /* Show topbar, hide sidebar by default */
+            .topbar { display: flex; }
+            .sidebar { transform: translateX(-100%); padding-top: 1.5rem; }
+            .sidebar.open { transform: translateX(0); }
+
+            /* Main content full width with topbar offset */
+            .main-content { margin-left: 0; padding: 1.2rem 1rem; padding-top: 5rem; }
+
+            /* Hero smaller on mobile */
+            .hero-banner { padding: 2rem 1.5rem; border-radius: 16px; }
+            .hero-banner h1 { font-size: 1.8rem; }
+            .hero-banner p { font-size: 1rem !important; }
+
+            /* Recipe cards stack vertically on mobile */
+            .recipe-item { flex-direction: column !important; gap: 1rem !important; margin-bottom: 1.2rem; }
+            .recipe-img-wrapper { width: 100% !important; height: 180px !important; border-radius: 16px; }
+            .recipe-item .pe-2 { padding-right: 0 !important; }
+
+            /* Grocery cards 2 columns on mobile */
+            .row.g-5 { --bs-gutter-x: 1rem; --bs-gutter-y: 1rem; }
+            .col-lg-7, .col-lg-5 { padding: 0; }
+
+            /* Section header */
+            .section-header-box { height: auto; margin-bottom: 1rem; }
+
+            /* Floating cart smaller */
+            .floating-cart { padding: 0.8rem 1.2rem; bottom: 20px; right: 16px; }
+        }
+
+        @media (max-width: 480px) {
+            /* Single column grocery on very small screens */
+            .row.g-3 > .col-sm-6 { width: 50%; }
+            .grocery-card-img { height: 100px; }
+        }
     </style>
 </head>
 <body>
 
-    <!-- Sidebar -->
-<div class="sidebar">
+<!-- Mobile -->
+<div class="topbar">
+    <span class="topbar-logo">foodify.</span>
+    <button class="hamburger" onclick="toggleSidebar()">
+        <i class="bi bi-list" id="hamburgerIcon"></i>
+    </button>
+</div>
+
+<!-- ── SIDEBAR OVERLAY ── -->
+<div class="sidebar-overlay" id="sidebarOverlay" onclick="toggleSidebar()"></div>
+
+<!-- ── SIDEBAR ── -->
+<div class="sidebar" id="sidebar">
     <div class="sidebar-logo"><h2>foodify.</h2></div>
     <div class="sidebar-greet-box"><p><?= $greeting ?></p></div>
     
@@ -348,7 +403,7 @@ if ($isLoggedIn) {
             </div>
             <div class="row g-3">
                 <?php foreach ($items as $item): ?>
-                <div class="col-sm-6">
+                <div class="col-6 col-sm-6">
                     <?php $productImg = getImageSrc($item['image'], 'assets/images/items/'); ?>
                     <div class="grocery-card shadow-sm" onclick="openModal(
                         <?= $item['item_id'] ?>,
@@ -362,12 +417,10 @@ if ($isLoggedIn) {
                         '<?= addslashes(htmlspecialchars($item['unit'] ?? '')) ?>',
                         '<?= addslashes(htmlspecialchars($item['description'] ?? '')) ?>'
                     )">
-                        <!-- Image -->
                         <div class="grocery-card-img">
                             <img src="<?= $productImg ? htmlspecialchars($productImg) : 'https://placehold.co/400x300?text=No+Image' ?>"
                                  alt="<?= htmlspecialchars($item['name']) ?>">
                         </div>
-                        <!-- Body -->
                         <div class="grocery-card-body">
                             <h6 class="fw-bold mb-1 text-truncate" style="font-size:0.88rem;" title="<?= htmlspecialchars($item['name']) ?>">
                                 <?= htmlspecialchars($item['name']) ?>
@@ -402,13 +455,31 @@ if ($isLoggedIn) {
 
 <script>
 const isLoggedIn = <?= $isLoggedIn ? 'true' : 'false' ?>;
-const cartPath   = 'modules/shop/addtocart.php'; // ← path untuk modal
+const cartPath   = 'modules/shop/addtocart.php';
 </script>
 
 <?php $cartUrl = 'modules/shop/cart.php'; ?>
 <?php include __DIR__ . '/modules/shop/item_modal.php'; ?>
 
 <script>
+// ── Sidebar toggle ──
+function toggleSidebar() {
+    const sidebar  = document.getElementById('sidebar');
+    const overlay  = document.getElementById('sidebarOverlay');
+    const icon     = document.getElementById('hamburgerIcon');
+    const isOpen   = sidebar.classList.toggle('open');
+    overlay.classList.toggle('active', isOpen);
+    icon.className = isOpen ? 'bi bi-x-lg' : 'bi bi-list';
+}
+
+// Close sidebar bila klik nav link (mobile)
+document.querySelectorAll('.sidebar-nav a').forEach(link => {
+    link.addEventListener('click', () => {
+        const sidebar = document.getElementById('sidebar');
+        if (sidebar.classList.contains('open')) toggleSidebar();
+    });
+});
+
 async function addToCart(e, itemId, btn) {
     e.stopPropagation();
     if (!isLoggedIn) { window.location.href = 'modules/auth/login.php'; return; }
