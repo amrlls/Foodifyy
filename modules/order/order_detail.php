@@ -222,9 +222,59 @@ $isPendingOnline = ($order['status'] === 'pending' && $order['method'] === 'onli
         @media (max-width: 992px) {
             .breadcrumb-bar, .content-body { padding: 1.5rem 2rem; }
         }
+        .topbar { display:none; position:fixed; top:0; left:0; right:0; z-index:999; background:var(--sidebar-dark); padding:1rem 1.5rem; align-items:center; justify-content:space-between; }
+
+        .topbar-logo { font-family:'Playfair Display',serif; font-weight:900; font-size:1.5rem; letter-spacing:-1px; background:var(--primary-grad); background-clip:text; -webkit-background-clip:text; -webkit-text-fill-color:transparent; }
+
+        .hamburger { background:none; border:none; color:white; font-size:1.5rem; cursor:pointer; }
+
+        .sidebar-overlay { display:none; position:fixed; inset:0; background:rgba(0,0,0,.5); z-index:998; }
+
+        .sidebar-overlay.active { display:block; }
+
+        @media (max-width:768px){
+
+        .topbar { display:flex; }
+
+        .sidebar { transform:translateX(-100%); transition:transform .3s ease; }
+
+        .sidebar.open { transform:translateX(0); }
+
+        .main-content { margin-left:0; padding-top:75px; }
+
+        .breadcrumb-bar { padding:1rem; flex-wrap:wrap; gap:5px; }
+
+        .content-body { padding:1rem; }
+
+        .info-card { padding:1.2rem; border-radius:16px; }
+
+        .order-item { align-items:flex-start; }
+
+        .item-price { font-size:.85rem; }
+
+        .detail-row { flex-direction:column; align-items:flex-start; gap:4px; }
+
+        .detail-row .value { text-align:left; max-width:100%!important; }
+
+        .status-badge { margin-top:10px; }
+
+        .floating-cart { bottom:20px; right:20px; padding:.9rem 1.4rem; }
+
+        }
     </style>
 </head>
 <body>
+<div class="topbar">
+    <span class="topbar-logo">foodify.</span>
+
+    <button class="hamburger" onclick="toggleSidebar()">
+        <i class="bi bi-list" id="hamburgerIcon"></i>
+    </button>
+</div>
+
+<div class="sidebar-overlay"
+     id="sidebarOverlay"
+     onclick="toggleSidebar()"></div>
 
 <div class="sidebar">
     <div class="sidebar-logo"><h2>foodify.</h2></div>
@@ -420,6 +470,30 @@ $isPendingOnline = ($order['status'] === 'pending' && $order['method'] === 'onli
         <?php endif; ?>
     </span>
 </a>
+<script>
+function toggleSidebar() {
+    const sidebar = document.querySelector('.sidebar');
+    const overlay = document.getElementById('sidebarOverlay');
+    const icon = document.getElementById('hamburgerIcon');
 
+    const isOpen = sidebar.classList.toggle('open');
+
+    overlay.classList.toggle('active', isOpen);
+
+    icon.className = isOpen
+        ? 'bi bi-x-lg'
+        : 'bi bi-list';
+}
+
+document.querySelectorAll('.sidebar-nav a').forEach(link => {
+    link.addEventListener('click', () => {
+        const sidebar = document.querySelector('.sidebar');
+
+        if (sidebar.classList.contains('open')) {
+            toggleSidebar();
+        }
+    });
+});
+</script>
 </body>
 </html>

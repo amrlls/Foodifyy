@@ -216,10 +216,118 @@ $profileSrc = getImageSrc($user['profile_image'], '../../assets/images/profiles/
             padding:14px 0; font-weight:700; width:100%; font-size:0.95rem; transition:0.3s; cursor:pointer;
         }
         .btn-modal-cancel:hover { background:#E2E5E9; }
+        /* ── TOPBAR MOBILE ── */
+        .topbar {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            z-index: 999;
+            background: var(--sidebar-dark);
+            padding: 1rem 1.5rem;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .topbar-logo {
+            font-family: 'Playfair Display', serif;
+            font-weight: 900;
+            font-size: 1.5rem;
+            letter-spacing: -1px;
+            background: var(--primary-grad);
+            background-clip: text;
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .hamburger {
+            background: none;
+            border: none;
+            color: white;
+            font-size: 1.4rem;
+            cursor: pointer;
+            padding: 4px;
+        }
+
+        /* Overlay */
+        .sidebar-overlay {
+            display: none;
+            position: fixed;
+            inset: 0;
+            background: rgba(0,0,0,0.5);
+            z-index: 998;
+        }
+
+        .sidebar-overlay.active {
+            display: block;
+        }
+        /* ── MOBILE ── */
+        @media (max-width: 768px) {
+
+            .topbar {
+                display: flex;
+            }
+
+            .sidebar {
+                transform: translateX(-100%);
+                transition: transform 0.3s ease;
+                z-index: 1000;
+            }
+
+            .sidebar.open {
+                transform: translateX(0);
+            }
+
+            .main-content {
+                margin-left: 0;
+                padding: 5rem 1rem 1rem;
+            }
+
+            .top-bar h1 {
+                font-size: 2rem;
+            }
+
+            .top-bar p {
+                font-size: 0.95rem;
+            }
+
+            .profile-card {
+                padding: 1.5rem;
+                border-radius: 24px;
+            }
+
+            .profile-img-preview-wrapper {
+                width: 110px;
+                height: 110px;
+                margin-bottom: 1.5rem;
+            }
+
+            .btn-update-main,
+            .btn-password-alt {
+                padding: 14px;
+                font-size: 0.9rem;
+            }
+
+            .confirm-box {
+                padding: 2rem 1.5rem;
+                border-radius: 28px;
+            }
+        }
     </style>
 </head>
 <body>
+<!-- TOPBAR MOBILE -->
+<div class="topbar">
+    <span class="topbar-logo">foodify.</span>
 
+    <button class="hamburger" onclick="toggleSidebar()">
+        <i class="bi bi-list" id="hamburgerIcon"></i>
+    </button>
+</div>
+
+<!-- OVERLAY -->
+<div class="sidebar-overlay" id="sidebarOverlay" onclick="toggleSidebar()"></div>
 <div class="sidebar">
     <div class="sidebar-logo"><h2>foodify.</h2></div>
     <div class="sidebar-greet-box"><p>Manage your account</p></div>
@@ -485,6 +593,29 @@ function togglePwd(id, btn) {
         icon.classList.replace('bi-eye-slash', 'bi-eye');
     }
 }
+function toggleSidebar() {
+    const sidebar = document.querySelector('.sidebar');
+    const overlay = document.getElementById('sidebarOverlay');
+    const icon = document.getElementById('hamburgerIcon');
+
+    const isOpen = sidebar.classList.toggle('open');
+
+    overlay.classList.toggle('active', isOpen);
+
+    icon.className = isOpen
+        ? 'bi bi-x-lg'
+        : 'bi bi-list';
+}
+
+document.querySelectorAll('.sidebar-nav a').forEach(link => {
+    link.addEventListener('click', () => {
+        const sidebar = document.querySelector('.sidebar');
+
+        if (sidebar.classList.contains('open')) {
+            toggleSidebar();
+        }
+    });
+});
 </script>
 </body>
 </html>

@@ -124,11 +124,7 @@ $count  = count($orders);
             margin-bottom: 1rem;
         }
 
-        .header-section {
-            padding: 3rem 4rem 2rem;
-            background: white;
-            border-bottom: 1px solid #f5f5f5;
-        }
+
         .header-section p { color: #7f8c8d; font-size: 1rem; margin-top: 0.5rem; }
 
         .content-body { padding: 2rem 4rem; }
@@ -142,6 +138,14 @@ $count  = count($orders);
         }
         .filter-tab:hover { border-color: var(--accent); color: var(--accent); }
         .filter-tab.active { background: var(--primary-grad); border-color: transparent; color: white; }
+        .filter-tabs {
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+}
+
+.filter-tabs::-webkit-scrollbar {
+    display: none;
+}
 
         /* Order card */
         .order-card {
@@ -236,10 +240,134 @@ $count  = count($orders);
         @media (max-width: 992px) {
             .header-section, .content-body { padding: 2rem; }
         }
+        .topbar {
+        display: none;
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        z-index: 999;
+        background: var(--sidebar-dark);
+        padding: 1rem 1.5rem;
+        align-items: center;
+        justify-content: space-between;
+    }
+
+    .topbar-logo {
+        font-family: 'Playfair Display', serif;
+        font-weight: 900;
+        font-size: 1.5rem;
+        letter-spacing: -1px;
+        background: var(--primary-grad);
+        background-clip: text;
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+    }
+
+    .hamburger {
+        background: none;
+        border: none;
+        color: white;
+        font-size: 1.4rem;
+        cursor: pointer;
+    }
+
+    .sidebar-overlay {
+        display: none;
+        position: fixed;
+        inset: 0;
+        background: rgba(0,0,0,0.5);
+        z-index: 998;
+    }
+
+    .sidebar-overlay.active {
+        display: block;
+    }
+    @media (max-width: 768px) {
+
+        .topbar {
+            display: flex;
+        }
+
+        .sidebar {
+            transform: translateX(-100%);
+            transition: transform .3s ease;
+        }
+
+        .sidebar.open {
+            transform: translateX(0);
+        }
+
+        .main-content {
+            margin-left: 0;
+            padding-top: 75px;
+        }
+
+        .header-section {
+            padding: 1.5rem;
+        }
+
+        .content-body {
+            padding: 1rem;
+        }
+
+        .top-bar h1,
+        .page-title {
+            font-size: 2rem;
+        }
+
+        .filter-tabs {
+            overflow-x: auto;
+            flex-wrap: nowrap;
+            padding-bottom: 5px;
+        }
+
+        .filter-tab {
+            white-space: nowrap;
+        }
+
+        .order-header {
+            flex-direction: column;
+            align-items: flex-start;
+            gap: 10px;
+        }
+
+        .order-meta {
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .d-flex.align-items-center.justify-content-between {
+            flex-direction: column;
+            align-items: flex-start !important;
+            gap: 15px;
+        }
+
+        .btn-pay-now {
+            width: 100%;
+            justify-content: center;
+        }
+
+        .floating-cart {
+            bottom: 20px;
+            right: 20px;
+            padding: .9rem 1.4rem;
+        }
+    }
     </style>
 </head>
 <body>
+<div class="topbar">
+    <span class="topbar-logo">foodify.</span>
 
+    <button class="hamburger" onclick="toggleSidebar()">
+        <i class="bi bi-list" id="hamburgerIcon"></i>
+    </button>
+</div>
+
+<div class="sidebar-overlay"
+     id="sidebarOverlay"
+     onclick="toggleSidebar()"></div>
 <div class="sidebar">
     <div class="sidebar-logo"><h2>foodify.</h2></div>
     <div class="sidebar-greet-box"><p>Track your orders.</p></div>
@@ -377,5 +505,30 @@ $count  = count($orders);
     </span>
 </a>
 
+<script>
+function toggleSidebar() {
+    const sidebar = document.querySelector('.sidebar');
+    const overlay = document.getElementById('sidebarOverlay');
+    const icon = document.getElementById('hamburgerIcon');
+
+    const isOpen = sidebar.classList.toggle('open');
+
+    overlay.classList.toggle('active', isOpen);
+
+    icon.className = isOpen
+        ? 'bi bi-x-lg'
+        : 'bi bi-list';
+}
+
+document.querySelectorAll('.sidebar-nav a').forEach(link => {
+    link.addEventListener('click', () => {
+        const sidebar = document.querySelector('.sidebar');
+
+        if (sidebar.classList.contains('open')) {
+            toggleSidebar();
+        }
+    });
+});
+</script>
 </body>
 </html>
