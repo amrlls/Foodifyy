@@ -220,47 +220,118 @@ $isPendingOnline = ($order['status'] === 'pending' && $order['method'] === 'onli
         .floating-cart:hover { background: #2d2f31; transform: translateY(-3px); }
 
         @media (max-width: 992px) {
-            .breadcrumb-bar, .content-body { padding: 1.5rem 2rem; }
-        }
-        .topbar { display:none; position:fixed; top:0; left:0; right:0; z-index:999; background:var(--sidebar-dark); padding:1rem 1.5rem; align-items:center; justify-content:space-between; }
+    .breadcrumb-bar, .content-body { padding: 1.5rem 2rem; }
+}
 
-        .topbar-logo { font-family:'Playfair Display',serif; font-weight:900; font-size:1.5rem; letter-spacing:-1px; background:var(--primary-grad); background-clip:text; -webkit-background-clip:text; -webkit-text-fill-color:transparent; }
+/* Mobile Topbar */
+.topbar {
+    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    z-index: 999;
+    background: var(--sidebar-dark);
+    padding: 1rem 1.5rem;
+    align-items: center;
+    justify-content: space-between;
+}
 
-        .hamburger { background:none; border:none; color:white; font-size:1.5rem; cursor:pointer; }
+.topbar-logo {
+    font-family: 'Playfair Display', serif;
+    font-weight: 900;
+    font-size: 1.5rem;
+    letter-spacing: -1px;
+    background: var(--primary-grad);
+    background-clip: text;
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+}
 
-        .sidebar-overlay { display:none; position:fixed; inset:0; background:rgba(0,0,0,.5); z-index:998; }
+.hamburger {
+    background: none;
+    border: none;
+    color: white;
+    font-size: 1.4rem;
+    cursor: pointer;
+    padding: 4px;
+}
 
-        .sidebar-overlay.active { display:block; }
+.sidebar-overlay {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,.5);
+    z-index: 998;
+}
 
-        @media (max-width:768px){
+.sidebar-overlay.active {
+    display: block;
+}
 
-        .topbar { display:flex; }
+@media (max-width: 768px) {
 
-        .sidebar { transform:translateX(-100%); transition:transform .3s ease; }
+    .topbar {
+        display: flex;
+    }
 
-        .sidebar.open { transform:translateX(0); }
+    .sidebar {
+        transform: translateX(-100%);
+        transition: transform .3s ease;
+        padding-top: 1.5rem;
+    }
 
-        .main-content { margin-left:0; padding-top:75px; }
+    .sidebar.open {
+        transform: translateX(0);
+    }
 
-        .breadcrumb-bar { padding:1rem; flex-wrap:wrap; gap:5px; }
+    .main-content {
+        margin-left: 0;
+        padding-top: 5rem;
+    }
 
-        .content-body { padding:1rem; }
+    .header-section {
+        padding: 1rem;
+    }
 
-        .info-card { padding:1.2rem; border-radius:16px; }
+    .content-body {
+        padding: 1rem;
+    }
 
-        .order-item { align-items:flex-start; }
+    .top-bar h1 {
+        font-size: 2rem;
+    }
 
-        .item-price { font-size:.85rem; }
+    .order-header {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: .8rem;
+    }
 
-        .detail-row { flex-direction:column; align-items:flex-start; gap:4px; }
+    .order-meta {
+        flex-direction: column;
+        gap: 1rem;
+        width: 100%;
+    }
 
-        .detail-row .value { text-align:left; max-width:100%!important; }
+    .order-card .d-flex.align-items-center.justify-content-between {
+        flex-direction: column;
+        align-items: flex-start !important;
+        gap: 1rem;
+    }
 
-        .status-badge { margin-top:10px; }
+    .btn-pay-now {
+        width: 100%;
+        justify-content: center;
+        margin-left: 0 !important;
+    }
 
-        .floating-cart { bottom:20px; right:20px; padding:.9rem 1.4rem; }
-
-        }
+    .floating-cart {
+        bottom: 20px;
+        right: 16px;
+        padding: .8rem 1.2rem;
+    }
+}
     </style>
 </head>
 <body>
@@ -275,6 +346,7 @@ $isPendingOnline = ($order['status'] === 'pending' && $order['method'] === 'onli
 <div class="sidebar-overlay"
      id="sidebarOverlay"
      onclick="toggleSidebar()"></div>
+
 
 <div class="sidebar">
     <div class="sidebar-logo"><h2>foodify.</h2></div>
@@ -310,11 +382,7 @@ $isPendingOnline = ($order['status'] === 'pending' && $order['method'] === 'onli
 </div>
 
 <div class="main-content">
-    <div class="breadcrumb-bar">
-        <a href="my_orders.php">My Orders</a>
-        <span>/</span>
-        <span class="current">Order #<?= str_pad($orderId, 6, '0', STR_PAD_LEFT) ?></span>
-    </div>
+
 
     <div class="content-body">
         <div class="row g-4">
