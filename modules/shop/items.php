@@ -53,7 +53,7 @@ if ($search !== '') {
 }
 
 $whereSQL = implode(' AND ', $where);
-$sql      = "SELECT * FROM items WHERE $whereSQL ORDER BY created_at DESC";
+$sql = "SELECT * FROM items WHERE $whereSQL ORDER BY RAND()";
 
 $stmt = $conn->prepare($sql);
 if (!empty($params)) {

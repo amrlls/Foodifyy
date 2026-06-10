@@ -54,7 +54,7 @@ $whereSQL = implode(' AND ', $where);
 
 $sql = "SELECT r.*, 
         (SELECT COUNT(*) FROM saved_recipes s WHERE s.recipe_id = r.recipe_id AND s.user_id = ?) as is_saved 
-        FROM recipes r WHERE $whereSQL ORDER BY created_at DESC";
+        FROM recipes r WHERE $whereSQL ORDER BY RAND()";
 
 $allParams = array_merge([$userId], $params);
 $allTypes  = 'i' . $types;

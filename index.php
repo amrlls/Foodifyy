@@ -43,11 +43,11 @@ $sql_recipes = "SELECT r.*,
                 (SELECT COUNT(*) FROM saved_recipes s WHERE s.recipe_id = r.recipe_id AND s.user_id = $userId) as is_saved 
                 FROM recipes r 
                 WHERE r.is_public = 1
-                ORDER BY r.created_at DESC LIMIT 5";
+                ORDER BY RAND() LIMIT 5";
 $res_recipes = $conn->query($sql_recipes);
 $recipes = $res_recipes->fetch_all(MYSQLI_ASSOC);
 
-$sql_items = "SELECT * FROM items LIMIT 8";
+$sql_items = "SELECT * FROM items ORDER BY RAND() LIMIT 8";
 $res_items = $conn->query($sql_items);
 $items = $res_items->fetch_all(MYSQLI_ASSOC);
 
@@ -357,7 +357,7 @@ if ($isLoggedIn) {
                 <div class="d-flex justify-content-between align-items-end w-100">
                     <div>
                         <h6 class="text-danger fw-bold text-uppercase small" style="font-size:0.7rem;margin-bottom:4px;">Handpicked</h6>
-                        <h3 class="fw-bold m-0">New For You</h3>
+                        <h3 class="fw-bold m-0">Suggested For You</h3>
                     </div>
                     <a href="modules/recipe/recipes.php" class="text-muted fw-bold text-decoration-none small">Browse All <i class="bi bi-arrow-right ms-1"></i></a>
                 </div>
