@@ -79,7 +79,6 @@ $embedUrl = (!empty($videoUrl) && str_contains($videoUrl, 'cloudinary.com')) ? $
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body { font-family: 'Plus Jakarta Sans', sans-serif; background-color: var(--soft-bg); color: #1A1C1E; }
 
-        /* ── SIDEBAR ── */
         .sidebar {
             position: fixed; left: 0; top: 0; width: var(--sidebar-w); height: 100vh;
             background: var(--sidebar-dark); color: white;
@@ -106,23 +105,17 @@ $embedUrl = (!empty($videoUrl) && str_contains($videoUrl, 'cloudinary.com')) ? $
             font-weight: 500; transition: all 0.3s ease;
         }
         .sidebar-nav a:hover { color: white; background: rgba(255,255,255,0.05); }
-        .sidebar-nav a.active {
-            background: var(--primary-grad); color: white;
-            box-shadow: 0 10px 20px rgba(255,107,107,0.25);
-        }
+        .sidebar-nav a.active { background: var(--primary-grad); color: white; box-shadow: 0 10px 20px rgba(255,107,107,0.25); }
         .sidebar-footer { padding-top: 2rem; border-top: 1px solid rgba(255,255,255,0.1); }
         .user-card {
-            background: rgba(255,255,255,0.03);
-            border: 1px solid rgba(255,255,255,0.08);
-            padding: 15px; border-radius: 20px;
-            transition: all 0.2s ease; cursor: pointer;
+            background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.08);
+            padding: 15px; border-radius: 20px; transition: all 0.2s ease; cursor: pointer;
         }
         .user-card:hover { background: rgba(255,255,255,0.07); transform: translateY(-2px); }
         .user-card:active { transform: scale(0.95); background: rgba(255,255,255,0.1); }
         .user-card img { transition: transform 0.3s ease; }
         .user-card:hover img { transform: rotate(5deg); }
 
-        /* ── MAIN CONTENT ── */
         .main-content { margin-left: var(--sidebar-w); padding: 2rem; min-height: 100vh; }
 
         .btn-back {
@@ -160,7 +153,6 @@ $embedUrl = (!empty($videoUrl) && str_contains($videoUrl, 'cloudinary.com')) ? $
         .section-title { font-weight: 800; border-bottom: 3px solid var(--accent); display: inline-block; margin-bottom: 1.2rem; padding-bottom: 4px; }
         .step-num { width: 28px; height: 28px; background: var(--primary-grad); color: white; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; font-size: 0.8rem; font-weight: bold; margin-right: 10px; flex-shrink: 0; }
 
-        /* ── RESPONSIVE ── */
         @media (max-width: 768px) {
             .sidebar { transform: translateX(-100%); }
             .sidebar.open { transform: translateX(0); }
@@ -170,42 +162,20 @@ $embedUrl = (!empty($videoUrl) && str_contains($videoUrl, 'cloudinary.com')) ? $
             .btn-back { margin-bottom: 1rem; }
         }
         .topbar {
-            display: none;
-            position: fixed;
-            top: 0;
-            left: 0;
-            right: 0;
-            z-index: 999;
-            background: var(--sidebar-dark);
-            padding: 1rem 1.5rem;
-            align-items: center;
-            justify-content: space-between;
+            display: none; position: fixed; top: 0; left: 0; right: 0; z-index: 999;
+            background: var(--sidebar-dark); padding: 1rem 1.5rem;
+            align-items: center; justify-content: space-between;
         }
-
         .topbar-logo {
-            font-family: 'Playfair Display', serif;
-            font-weight: 900;
-            font-size: 1.5rem;
-            letter-spacing: -1px;
-            background: var(--primary-grad);
-            background-clip: text;
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
+            font-family: 'Playfair Display', serif; font-weight: 900; font-size: 1.5rem;
+            letter-spacing: -1px; background: var(--primary-grad); background-clip: text;
+            -webkit-background-clip: text; -webkit-text-fill-color: transparent;
         }
-
-        .hamburger {
-            background: none;
-            border: none;
-            color: white;
-            font-size: 1.4rem;
-            cursor: pointer;
-            padding: 4px;
-        }
+        .hamburger { background: none; border: none; color: white; font-size: 1.4rem; cursor: pointer; padding: 4px; }
     </style>
 </head>
 <body>
 
-<!-- ── TOPBAR (mobile) ── -->
 <div class="topbar" id="topbar">
     <span class="topbar-logo">foodify.</span>
     <button class="hamburger" onclick="toggleSidebar()">
@@ -213,17 +183,11 @@ $embedUrl = (!empty($videoUrl) && str_contains($videoUrl, 'cloudinary.com')) ? $
     </button>
 </div>
 
-<!-- ── OVERLAY ── -->
 <div id="sidebarOverlay" onclick="toggleSidebar()" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:998;"></div>
 
 <div class="sidebar" id="sidebar">
-    <div class="sidebar-logo">
-        <h2>foodify.</h2>
-    </div>
-    <div class="sidebar-greet-box">
-        <p>What are we cooking today?</p>
-    </div>
-
+    <div class="sidebar-logo"><h2>foodify.</h2></div>
+    <div class="sidebar-greet-box"><p>What are we cooking today?</p></div>
     <ul class="sidebar-nav">
         <li><a href="../../index.php"><i class="bi bi-house-door-fill"></i> Home</a></li>
         <li><a href="recipes.php" class="active"><i class="bi bi-book"></i> Recipes</a></li>
@@ -233,28 +197,23 @@ $embedUrl = (!empty($videoUrl) && str_contains($videoUrl, 'cloudinary.com')) ? $
             <li><a href="../order/my_orders.php"><i class="bi bi-receipt"></i> Orders</a></li>
         <?php endif; ?>
     </ul>
-
     <div class="sidebar-footer">
         <?php if ($isLoggedIn): ?>
             <a href="../profile/profile.php" class="text-decoration-none d-block">
                 <div class="user-card d-flex align-items-center gap-3 mb-3">
-                <?php $navProfileSrc = getImageSrc($nav_profile_img, '../../assets/images/profiles/'); ?>
-                <?php if ($navProfileSrc): ?>
-                    <img src="<?= htmlspecialchars($navProfileSrc) ?>" style="width:42px; height:42px; border-radius:12px; object-fit:cover;">
-                <?php else: ?>
-                    <div class="text-white rounded-3 p-2 d-flex justify-content-center align-items-center" style="width:42px; height:42px; background: var(--primary-grad);">
-                        <i class="bi bi-person-fill"></i>
-                    </div>
-                <?php endif; ?>
-                <div class="overflow-hidden">
-                    <div class="text-white fw-bold small text-truncate" style="max-width: 130px;">
-                        <?= htmlspecialchars($username) ?>
-                    </div>
-                    <div style="font-size: 0.65rem; color: var(--accent); font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px;">
-                        <?= htmlspecialchars($nav_role) ?>
+                    <?php $navProfileSrc = getImageSrc($nav_profile_img, '../../assets/images/profiles/'); ?>
+                    <?php if ($navProfileSrc): ?>
+                        <img src="<?= htmlspecialchars($navProfileSrc) ?>" style="width:42px; height:42px; border-radius:12px; object-fit:cover;">
+                    <?php else: ?>
+                        <div class="text-white rounded-3 p-2 d-flex justify-content-center align-items-center" style="width:42px; height:42px; background: var(--primary-grad);">
+                            <i class="bi bi-person-fill"></i>
+                        </div>
+                    <?php endif; ?>
+                    <div class="overflow-hidden">
+                        <div class="text-white fw-bold small text-truncate" style="max-width: 130px;"><?= htmlspecialchars($username) ?></div>
+                        <div style="font-size: 0.65rem; color: var(--accent); font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px;"><?= htmlspecialchars($nav_role) ?></div>
                     </div>
                 </div>
-            </div>
             </a>
             <a href="../auth/logout.php" class="btn btn-outline-danger w-100 rounded-3 py-2 border-opacity-25" style="font-size:0.85rem">
                 <i class="bi bi-box-arrow-right me-2"></i> Logout
@@ -266,7 +225,7 @@ $embedUrl = (!empty($videoUrl) && str_contains($videoUrl, 'cloudinary.com')) ? $
 </div>
 
 <div class="main-content">
-    <a href="javascript:history.back()" class="btn-back"><i class="bi bi-arrow-left"></i> Go Back</a>
+    <a href="javascript:history.back()" class="btn-back" onclick="goBack(event)"><i class="bi bi-arrow-left"></i> Go Back</a>
 
     <div class="recipe-layout">
         <div class="recipe-card-main">
@@ -288,10 +247,7 @@ $embedUrl = (!empty($videoUrl) && str_contains($videoUrl, 'cloudinary.com')) ? $
                 <p class="text-muted"><?= htmlspecialchars($recipe['description']) ?></p>
                 <div>
                     <span class="badge bg-dark rounded-pill"><?= htmlspecialchars($recipe['cuisine']) ?></span>
-                    <span class="ms-2 text-muted small">
-                        <i class="bi bi-clock"></i>
-                        <?= htmlspecialchars($recipe['cooking_time']) ?> mins
-                    </span>
+                    <span class="ms-2 text-muted small"><i class="bi bi-clock"></i> <?= htmlspecialchars($recipe['cooking_time']) ?> mins</span>
                 </div>
             </div>
         </div>
@@ -352,8 +308,23 @@ $embedUrl = (!empty($videoUrl) && str_contains($videoUrl, 'cloudinary.com')) ? $
 
 <script>
     const isLoggedIn = <?= $isLoggedIn ? 'true' : 'false' ?>;
+    let saveStateChanged = false;
 
-    // ── Mobile sidebar ──
+    function goBack(e) {
+        e.preventDefault();
+        if (saveStateChanged) {
+            // Reload previous page supaya cookbook refresh
+            const ref = document.referrer;
+            if (ref) {
+                window.location.href = ref;
+            } else {
+                history.back();
+            }
+        } else {
+            history.back();
+        }
+    }
+
     function toggleSidebar() {
         const sidebar = document.getElementById('sidebar');
         const overlay = document.getElementById('sidebarOverlay');
@@ -385,8 +356,13 @@ $embedUrl = (!empty($videoUrl) && str_contains($videoUrl, 'cloudinary.com')) ? $
             formData.append('recipe_id', recipeId);
             const response = await fetch('toggle_save.php', { method: 'POST', body: formData });
             const data = await response.json();
-            if (data.status === 'saved') btn.classList.add('active');
-            else if (data.status === 'removed') btn.classList.remove('active');
+            if (data.status === 'saved') {
+                btn.classList.add('active');
+                saveStateChanged = true;
+            } else if (data.status === 'removed') {
+                btn.classList.remove('active');
+                saveStateChanged = true;
+            }
         } catch (error) { console.error('Error:', error); }
     }
 </script>
