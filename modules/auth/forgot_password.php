@@ -63,7 +63,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['step']) && $_POST['st
             $ins->bind_param("sss", $email, $token, $expiresAt);
             $ins->execute();
 
-            // Build reset link — tukar domain kalau dah live
+            // Build reset link 
             $protocol  = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https' : 'http';
             $resetLink = $protocol . "://" . $_SERVER['HTTP_HOST'] . "/modules/auth/forgot_password.php?token=" . $token;
 
