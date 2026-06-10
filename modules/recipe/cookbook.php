@@ -113,7 +113,7 @@ $my_recipes = $stmt_my->get_result()->fetch_all(MYSQLI_ASSOC);
 $stmt_saved = $conn->prepare("
     SELECT r.*, 1 as is_saved FROM recipes r 
     JOIN saved_recipes s ON r.recipe_id = s.recipe_id 
-    WHERE s.user_id = ?
+    WHERE s.user_id = ? AND r.is_public = 1
 ");
 $stmt_saved->bind_param("i", $userId);
 $stmt_saved->execute();
