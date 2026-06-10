@@ -1,0 +1,26 @@
+[10-Jun-2026 03:53:33 Europe/Berlin] PHP Fatal error:  Maximum execution time of 120 seconds exceeded in C:\xampp\htdocs\Foodifyy\vendor\guzzlehttp\guzzle\src\Handler\CurlMultiHandler.php on line 169
+[10-Jun-2026 05:02:07 Europe/Berlin] PHP Fatal error:  Uncaught mysqli_sql_exception: Cannot add or update a child row: a foreign key constraint fails (`foodifyy`.`cart`, CONSTRAINT `cart_ibfk_1` FOREIGN KEY (`user_id`) REFERENCES `users` (`user_id`) ON DELETE CASCADE) in C:\xampp\htdocs\Foodifyy\modules\shop\addtocart.php:43
+Stack trace:
+#0 C:\xampp\htdocs\Foodifyy\modules\shop\addtocart.php(43): mysqli_stmt->execute()
+#1 {main}
+  thrown in C:\xampp\htdocs\Foodifyy\modules\shop\addtocart.php on line 43
+[10-Jun-2026 05:02:10 Europe/Berlin] PHP Fatal error:  Uncaught mysqli_sql_exception: Cannot add or update a child row: a foreign key constraint fails (`foodifyy`.`cart`, CONSTRAINT `cart_ibfk_1` FOREIGN KEY (`user_id`) REFERENCES `users` (`user_id`) ON DELETE CASCADE) in C:\xampp\htdocs\Foodifyy\modules\shop\addtocart.php:43
+Stack trace:
+#0 C:\xampp\htdocs\Foodifyy\modules\shop\addtocart.php(43): mysqli_stmt->execute()
+#1 {main}
+  thrown in C:\xampp\htdocs\Foodifyy\modules\shop\addtocart.php on line 43
+[10-Jun-2026 05:02:14 Europe/Berlin] PHP Fatal error:  Uncaught mysqli_sql_exception: Cannot add or update a child row: a foreign key constraint fails (`foodifyy`.`cart`, CONSTRAINT `cart_ibfk_1` FOREIGN KEY (`user_id`) REFERENCES `users` (`user_id`) ON DELETE CASCADE) in C:\xampp\htdocs\Foodifyy\modules\shop\addtocart.php:43
+Stack trace:
+#0 C:\xampp\htdocs\Foodifyy\modules\shop\addtocart.php(43): mysqli_stmt->execute()
+#1 {main}
+  thrown in C:\xampp\htdocs\Foodifyy\modules\shop\addtocart.php on line 43
+[10-Jun-2026 05:02:15 Europe/Berlin] PHP Fatal error:  Uncaught mysqli_sql_exception: Cannot add or update a child row: a foreign key constraint fails (`foodifyy`.`cart`, CONSTRAINT `cart_ibfk_1` FOREIGN KEY (`user_id`) REFERENCES `users` (`user_id`) ON DELETE CASCADE) in C:\xampp\htdocs\Foodifyy\modules\shop\addtocart.php:43
+Stack trace:
+#0 C:\xampp\htdocs\Foodifyy\modules\shop\addtocart.php(43): mysqli_stmt->execute()
+#1 {main}
+  thrown in C:\xampp\htdocs\Foodifyy\modules\shop\addtocart.php on line 43
+[10-Jun-2026 05:02:19 Europe/Berlin] PHP Fatal error:  Uncaught mysqli_sql_exception: Cannot add or update a child row: a foreign key constraint fails (`foodifyy`.`cart`, CONSTRAINT `cart_ibfk_1` FOREIGN KEY (`user_id`) REFERENCES `users` (`user_id`) ON DELETE CASCADE) in C:\xampp\htdocs\Foodifyy\modules\shop\addtocart.php:43
+Stack trace:
+#0 C:\xampp\htdocs\Foodifyy\modules\shop\addtocart.php(43): mysqli_stmt->execute()
+#1 {main}
+  thrown in C:\xampp\htdocs\Foodifyy\modules\shop\addtocart.php on line 43

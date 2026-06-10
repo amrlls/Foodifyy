@@ -1,0 +1,5 @@
+Options -Indexes
+php_flag display_errors off
+
+ErrorDocument 500 /error.php
+ErrorDocument 404 /error.php
