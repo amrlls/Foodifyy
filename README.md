@@ -1,4 +1,4 @@
-# 🍽️ Foodify
+# Foodify
 
 A web-based food marketplace and recipe platform built with PHP, MySQL, and Bootstrap 5.
 
