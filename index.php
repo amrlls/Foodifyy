@@ -1,4 +1,5 @@
 <?php
+
 session_start();
 
 require_once __DIR__ . '/config/database.php';
@@ -153,7 +154,7 @@ if ($isLoggedIn) {
         }
         .btn-see-all {
             display: inline-flex; align-items: center; gap: 6px;
-            color: #616a71; font-weight: 700; font-size: 0.85rem;
+            color: #1A1C1E; font-weight: 700; font-size: 0.85rem;
             text-decoration: none;
             transition: color 0.25s ease;
         }
@@ -222,7 +223,7 @@ if ($isLoggedIn) {
         .save-btn-circle:active { transform: scale(0.9); }
         .save-btn-circle.active i { color: #FF6B6B; }
 
-
+    
         .grocery-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
 
         .grocery-card {
@@ -241,7 +242,7 @@ if ($isLoggedIn) {
         .grocery-card:nth-child(7) { animation-delay: 2.4s; }
         .grocery-card:nth-child(8) { animation-delay: 2.8s; }
         
-        .grocery-card-img { position: relative; height: 129px; overflow: hidden; background: #f1f3f5; }
+        .grocery-card-img { position: relative; height: 120px; overflow: hidden; background: #f1f3f5; }
         .grocery-card-img img { width: 100%; height: 100%; object-fit: cover; transition: transform 0.55s cubic-bezier(0.165, 0.84, 0.44, 1); }
         .grocery-card-img::after {
             content: ''; position: absolute; inset: 0;
