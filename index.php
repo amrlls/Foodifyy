@@ -177,9 +177,9 @@ if ($isLoggedIn) {
         .recipe-item:nth-child(5) { animation-delay: 2.4s; }
         .recipe-img-wrapper { 
             width: 220px; height: 160px; border-radius: 22px;
-            overflow: hidden; flex-shrink: 0; position: relative;
+            flex-shrink: 0; position: relative;
         }
-        .recipe-img-wrapper img { width: 100%; height: 100%; object-fit: cover; transition: transform 0.6s cubic-bezier(0.165, 0.84, 0.44, 1); }
+        .recipe-img-wrapper img { width: 100%; height: 100%; object-fit: cover; border-radius: 22px; transition: transform 0.6s cubic-bezier(0.165, 0.84, 0.44, 1); }
         .recipe-img-wrapper::after {
             content: ''; position: absolute; inset: 0;
             background: linear-gradient(to top, rgba(0,0,0,0.25) 0%, transparent 60%);
@@ -213,17 +213,18 @@ if ($isLoggedIn) {
         .btn-view-details:hover { transform: translateY(-2px); box-shadow: 0 8px 20px rgba(26,28,30,0.2); color: #fff; background: #444; }
         .btn-view-details i { position: relative; z-index: 1; }
 
+        /* ── SAVE BUTTON — sama sebijik macam .btn-heart dalam recipes.php ── */
         .save-btn-circle {
-            width: 40px; height: 40px; border-radius: 50%; background: #fff;
+            position: absolute; top: 12px; left: 12px; z-index: 10;
+            background: rgba(255,255,255,0.9); border: none;
+            width: 45px; height: 45px; border-radius: 15px;
             display: flex; align-items: center; justify-content: center;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.08);
-            transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1); border: none;
+            color: #d1d1d1; cursor: pointer; transition: 0.3s;
+            backdrop-filter: blur(5px);
         }
-        .save-btn-circle:hover { transform: scale(1.15); background: #fff0f0; box-shadow: 0 6px 16px rgba(255,107,107,0.2); }
-        .save-btn-circle:active { transform: scale(0.9); }
-        .save-btn-circle.active i { color: #FF6B6B; }
+        .save-btn-circle:hover { transform: scale(1.1); color: #ff4757; }
+        .save-btn-circle.active { color: #ff4757; background: #fff; }
 
-    
         .grocery-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
 
         .grocery-card {
@@ -415,13 +416,13 @@ if ($isLoggedIn) {
                 <div class="recipe-img-wrapper shadow-sm">
                     <?php $imgSrc = getImageSrc($r['image'], 'assets/images/recipes/'); ?>
                     <img src="<?= $imgSrc ? htmlspecialchars($imgSrc) : 'https://placehold.co/400x400' ?>" class="w-100 h-100 object-fit-cover">
+                    <button class="save-btn-circle <?= $activeClass ?>" onclick="toggleSave(event, <?= $r['recipe_id'] ?>)">
+                        <i class="bi bi-heart-fill fs-6"></i>
+                    </button>
                 </div>
                 <div class="flex-grow-1 pe-2">
                     <div class="d-flex justify-content-between align-items-start">
                         <span class="cuisine-tag mb-2"><?= $r['cuisine'] ?></span>
-                        <button class="save-btn-circle <?= $activeClass ?>" onclick="toggleSave(event, <?= $r['recipe_id'] ?>)">
-                            <i class="bi bi-heart<?= $isSaved ? '-fill' : '' ?> fs-6 text-danger"></i>
-                        </button>
                     </div>
                     <h5 class="mb-1"><?= htmlspecialchars($r['title']) ?></h5>
                     <p class="text-muted small mb-3" style="line-height:1.5;">
@@ -582,18 +583,16 @@ async function toggleSave(event, recipeId) {
     event.preventDefault(); 
     if (!isLoggedIn) { window.location.href = 'modules/auth/login.php'; return; }
 
-    const icon = event.currentTarget.querySelector('i');
+    const btn = event.currentTarget;
     try {
         const formData = new FormData();
         formData.append('recipe_id', recipeId);
         const response = await fetch('modules/recipe/toggle_save.php', { method: 'POST', body: formData });
         const data     = await response.json();
         if (data.status === 'saved') { 
-            icon.classList.replace('bi-heart', 'bi-heart-fill'); 
-            icon.style.transform = "scale(1.3)";
-            setTimeout(() => icon.style.transform = "scale(1)", 200);
+            btn.classList.add('active');
         } else { 
-            icon.classList.replace('bi-heart-fill', 'bi-heart'); 
+            btn.classList.remove('active');
         }
     } catch (error) { console.error('Error:', error); }
 }

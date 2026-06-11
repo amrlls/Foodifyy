@@ -227,8 +227,17 @@ $icons = [
         .card-img-box { height: 210px; position: relative; overflow: hidden; display: flex; align-items: center; justify-content: center; }
         .card-img-box img { width: 100%; height: 100%; object-fit: cover; transition: 0.6s ease; }
         .recipe-card:hover .card-img-box img { transform: scale(1.1); }
-        .card-actions { position: absolute; top: 20px; left: 20px; display: flex; gap: 10px; z-index: 10; }
+        .card-actions { position: absolute; top: 15px; left: 15px; display: flex; gap: 10px; z-index: 10; }
         .circle-btn { width: 40px; height: 40px; border-radius: 14px; border: none; background: rgba(255,255,255,0.9); display: flex; align-items: center; justify-content: center; transition: 0.3s; backdrop-filter: blur(5px); }
+        /* ── HEART SAVE BUTTON — petak putih ── */
+        .circle-btn.heart-btn {
+            background: #ffffff;
+            width: 42px; height: 42px; border-radius: 12px;
+            color: #d1d1d1;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+        }
+        .circle-btn.heart-btn:hover { transform: scale(1.1); color: #ff6b6b; }
+        .circle-btn.heart-btn.active { color: #ff4757 !important; }
         .cuisine-badge { position: absolute; bottom: 20px; right: 20px; background: rgba(255,255,255,0.2); backdrop-filter: blur(10px); color: white; font-size: 0.7rem; font-weight: 800; padding: 6px 14px; border-radius: 100px; text-transform: uppercase; border: 1px solid rgba(255,255,255,0.3); }
         .card-content { padding: 1.5rem; }
         .card-cat { color: var(--accent); font-size: 0.75rem; font-weight: 800; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 0.5rem; display: block; }
@@ -420,7 +429,7 @@ $icons = [
         ?>
             <div class="recipe-card">
                 <div class="card-actions">
-                    <button class="circle-btn active" onclick="toggleSave(event, <?= $recipe['recipe_id'] ?>)"><i class="bi bi-heart-fill text-danger"></i></button>
+                    <button class="circle-btn heart-btn active" onclick="toggleSave(event, <?= $recipe['recipe_id'] ?>)"><i class="bi bi-heart-fill"></i></button>
                 </div>
                 <a href="recipedetail.php?id=<?= $recipe['recipe_id'] ?>" class="text-decoration-none text-dark">
                     <div class="card-img-box" style="background: <?= $grad ?>;">

@@ -129,13 +129,17 @@ $embedUrl = (!empty($videoUrl) && str_contains($videoUrl, 'cloudinary.com')) ? $
         .recipe-layout { display: grid; grid-template-columns: 1fr 1fr; gap: 2rem; margin-bottom: 2rem; }
         .recipe-card-main { background: white; border-radius: 24px; overflow: hidden; box-shadow: 0 4px 12px rgba(0,0,0,0.08); position: relative; }
 
+        /* ── SAVE BUTTON — petak macam recipes.php ── */
         .btn-save-recipe {
             position: absolute; top: 15px; right: 15px; z-index: 10;
-            background: white; border: none; width: 45px; height: 45px; border-radius: 50%;
-            display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 10px rgba(0,0,0,0.12);
-            color: #ccc; cursor: pointer; transition: 0.2s;
+            background: #ffffff; border: none;
+            width: 45px; height: 45px; border-radius: 15px;
+            display: flex; align-items: center; justify-content: center;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+            color: #d1d1d1; cursor: pointer; transition: 0.3s;
         }
-        .btn-save-recipe.active { color: #ff4757; }
+        .btn-save-recipe:hover { transform: scale(1.1); color: #ff6b6b; }
+        .btn-save-recipe.active { color: #ff4757 !important; background: #fff; }
 
         .recipe-img-box { height: 280px; display: flex; align-items: center; justify-content: center; }
         .recipe-img-box img { width: 100%; height: 100%; object-fit: cover; }
@@ -225,7 +229,7 @@ $embedUrl = (!empty($videoUrl) && str_contains($videoUrl, 'cloudinary.com')) ? $
 </div>
 
 <div class="main-content">
-    <a href="javascript:history.back()" class="btn-back" onclick="goBack(event)"><i class="bi bi-arrow-left"></i> Go Back</a>
+    <a href="javascript:history.back()" class="btn-back"><i class="bi bi-arrow-left"></i> Go Back</a>
 
     <div class="recipe-layout">
         <div class="recipe-card-main">
@@ -308,22 +312,6 @@ $embedUrl = (!empty($videoUrl) && str_contains($videoUrl, 'cloudinary.com')) ? $
 
 <script>
     const isLoggedIn = <?= $isLoggedIn ? 'true' : 'false' ?>;
-    let saveStateChanged = false;
-
-    function goBack(e) {
-        e.preventDefault();
-        if (saveStateChanged) {
-            // Reload previous page supaya cookbook refresh
-            const ref = document.referrer;
-            if (ref) {
-                window.location.href = ref;
-            } else {
-                history.back();
-            }
-        } else {
-            history.back();
-        }
-    }
 
     function toggleSidebar() {
         const sidebar = document.getElementById('sidebar');
@@ -358,10 +346,8 @@ $embedUrl = (!empty($videoUrl) && str_contains($videoUrl, 'cloudinary.com')) ? $
             const data = await response.json();
             if (data.status === 'saved') {
                 btn.classList.add('active');
-                saveStateChanged = true;
             } else if (data.status === 'removed') {
                 btn.classList.remove('active');
-                saveStateChanged = true;
             }
         } catch (error) { console.error('Error:', error); }
     }
