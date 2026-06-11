@@ -94,7 +94,6 @@ $categories = $cat_result->fetch_all(MYSQLI_ASSOC);
             --accent: #FF8E53;
             --soft-bg: #fdfdfd;
             --sidebar-w: 280px;
-            --card-shadow: 0 10px 30px rgba(0,0,0,0.06);
         }
 
         * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -132,7 +131,7 @@ $categories = $cat_result->fetch_all(MYSQLI_ASSOC);
         }
         .user-card:hover { background: rgba(255,255,255,0.07); transform: translateY(-2px); }
         .cart-badge {
-            background: var(--primary-grad); color: white; font-size: 0.65rem; font-weight: 800;
+            background: #F8F9FA; color: #1A1C1E; font-size: 0.65rem; font-weight: 800;
             width: 20px; height: 20px; border-radius: 50%;
             display: inline-flex; align-items: center; justify-content: center; margin-left: auto;
         }
@@ -167,36 +166,75 @@ $categories = $cat_result->fetch_all(MYSQLI_ASSOC);
         .content-body { padding: 2rem 4rem; background: #fdfdfd; }
         .results-info { font-weight: 700; color: #bdc3c7; margin-bottom: 2rem; display: block; }
 
-        .product-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 1.8rem; }
+        /* ── PRODUCT GRID — ikut tema index ── */
+        .product-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 1.8rem; }
+
         .product-card {
-            background: white; border-radius: 24px; overflow: hidden; border: 1px solid #f0f0f0;
-            box-shadow: var(--card-shadow); transition: 0.35s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-            display: flex; flex-direction: column;
+            background: white; border-radius: 22px; overflow: hidden;
+            border: 1px solid rgba(0,0,0,0.04);
+            box-shadow: 0 10px 30px rgba(0,0,0,0.06);
+            transition: 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            display: flex; flex-direction: column; cursor: pointer; position: relative;
         }
-        .product-card:hover { transform: translateY(-10px); box-shadow: 0 24px 48px rgba(0,0,0,0.1); }
-        .product-img-box { height: 160px; position: relative; overflow: hidden; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
-        .product-img-box img { width: 100%; height: 100%; object-fit: cover; transition: 0.6s ease; }
-        .product-card:hover .product-img-box img { transform: scale(1.08); }
+        @media (hover: hover) {
+            .product-card:hover { transform: translateY(-12px); box-shadow: 0 25px 50px rgba(0,0,0,0.1); }
+            .product-card:hover .product-img-box img { transform: scale(1.1); }
+            .product-card:hover .product-name { color: #FF6B6B; }
+        }
+
+        .product-img-box {
+            height: 150px; position: relative; overflow: hidden;
+            display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+            background: #f1f3f5;
+        }
+        .product-img-box img { width: 100%; height: 100%; object-fit: cover; transition: transform 0.55s cubic-bezier(0.165, 0.84, 0.44, 1); }
         .product-img-box i { font-size: 3rem; color: white; opacity: 0.85; }
+
+        /* category badge — sebijik grocery-category-badge */
         .cat-badge {
-            position: absolute; bottom: 12px; right: 12px;
-            background: rgba(255,255,255,0.2); backdrop-filter: blur(8px);
-            color: white; border: 1px solid rgba(255,255,255,0.3);
-            font-size: 0.65rem; font-weight: 800; text-transform: uppercase;
-            padding: 5px 12px; border-radius: 100px; letter-spacing: 0.5px;
+            position: absolute; top: 8px; left: 8px; z-index: 3;
+            background: rgba(255,255,255,0.9); backdrop-filter: blur(6px);
+            font-size: 0.6rem; font-weight: 700; text-transform: uppercase;
+            letter-spacing: 0.8px; color: #636E72; padding: 3px 8px; border-radius: 20px;
         }
-        .product-body { padding: 1rem 1.1rem 1.1rem; display: flex; flex-direction: column; flex-grow: 1; }
-        .product-name { font-weight: 800; font-size: 1rem; color: #1A1C1E; margin-bottom: 0.35rem; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; line-height: 1.35; }
-        .product-price { font-size: 1.2rem; font-weight: 800; background: var(--primary-grad); background-clip: text; -webkit-background-clip: text; -webkit-text-fill-color: transparent; margin-bottom: 0.75rem; }
+
+        .product-body { padding: 0.85rem 0.95rem 1rem; display: flex; flex-direction: column; flex-grow: 1; gap: 6px; }
+
+        .product-name {
+            font-weight: 800; font-size: 0.85rem; color: #1A1C1E; line-height: 1.3;
+            display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical;
+            overflow: hidden; letter-spacing: -0.2px;
+            transition: color 0.3s ease;
+        }
+
+        .product-price-row { display: flex; align-items: baseline; justify-content: space-between; margin-top: 2px; }
+        .product-price {
+            font-size: 1.05rem; font-weight: 800;
+            background: var(--primary-grad); background-clip: text;
+            -webkit-background-clip: text; -webkit-text-fill-color: transparent; line-height: 1;
+        }
+        .product-unit { font-size: 0.65rem; font-weight: 600; color: #adb5bd; letter-spacing: 0.3px; }
+        .product-stock { display: flex; align-items: center; gap: 4px; }
+        .stock-dot { width: 6px; height: 6px; border-radius: 50%; background: #00b894; flex-shrink: 0; }
+        .stock-dot.low { background: #fdcb6e; }
+        .stock-dot.out { background: #d63031; }
+        .stock-label { font-size: 0.65rem; font-weight: 600; color: #b2bec3; letter-spacing: 0.2px; }
+
+        /* btn — sebijik btn-cart-minimal */
         .btn-cart {
-            margin-top: auto; width: 100%; padding: 11px; background: var(--primary-grad);
-            border: none; border-radius: 14px; color: white; font-weight: 700; font-size: 0.85rem;
-            font-family: 'Plus Jakarta Sans', sans-serif; cursor: pointer; transition: 0.3s;
-            display: flex; align-items: center; justify-content: center; gap: 8px;
+            margin-top: auto; width: 100%; padding: 11px 12px;
+            background: var(--primary-grad); color: white;
+            border: none; border-radius: 12px;
+            font-weight: 700; font-size: 0.78rem;
+            font-family: 'Plus Jakarta Sans', sans-serif;
+            cursor: pointer; transition: all 0.3s;
+            display: flex; align-items: center; justify-content: center;
+            gap: 6px; letter-spacing: 0.2px;
         }
-        .btn-cart:hover { opacity: 0.88; box-shadow: 0 10px 24px rgba(255,107,107,0.3); transform: translateY(-1px); }
-        .btn-cart:active { transform: scale(0.97); }
-        .btn-cart.adding { background: linear-gradient(135deg, #00b894, #00cec9); pointer-events: none; }
+        .btn-cart:hover { opacity:0.88; box-shadow:0 10px 26px rgba(255,107,107,0.3); }
+        .btn-cart:disabled { opacity:0.55; cursor:not-allowed; }
+        .btn-cart:active { transform: scale(0.96); }
+        .btn-cart.adding { background: linear-gradient(135deg, #00b894, #00cec9) !important; color: white !important; pointer-events: none; }
 
         .floating-cart {
             background: var(--sidebar-dark); padding: 1rem 1.8rem; border-radius: 50px;
@@ -226,38 +264,20 @@ $categories = $cat_result->fetch_all(MYSQLI_ASSOC);
         @media (max-width: 400px) {
             .product-grid { grid-template-columns: 1fr; }
         }
+
         .topbar {
-            display: none;
-            position: fixed;
-            top: 0;
-            left: 0;
-            right: 0;
-            z-index: 999;
-            background: var(--sidebar-dark);
-            padding: 1rem 1.5rem;
-            align-items: center;
-            justify-content: space-between;
+            display: none; position: fixed;
+            top: 0; left: 0; right: 0; z-index: 999;
+            background: var(--sidebar-dark); padding: 1rem 1.5rem;
+            align-items: center; justify-content: space-between;
         }
-
         .topbar-logo {
-            font-family: 'Playfair Display', serif;
-            font-weight: 900;
-            font-size: 1.5rem;
-            letter-spacing: -1px;
-            background: var(--primary-grad);
-            background-clip: text;
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
+            font-family: 'Playfair Display', serif; font-weight: 900;
+            font-size: 1.5rem; letter-spacing: -1px;
+            background: var(--primary-grad); background-clip: text;
+            -webkit-background-clip: text; -webkit-text-fill-color: transparent;
         }
-
-        .hamburger {
-            background: none;
-            border: none;
-            color: white;
-            font-size: 1.4rem;
-            cursor: pointer;
-            padding: 4px;
-        }
+        .hamburger { background: none; border: none; color: white; font-size: 1.4rem; cursor: pointer; padding: 4px; }
     </style>
 </head>
 <body>
@@ -352,7 +372,7 @@ $categories = $cat_result->fetch_all(MYSQLI_ASSOC);
                     $catStyle = $catColors[$item['category']] ?? ['grad' => 'linear-gradient(135deg,#2D3436,#000)', 'icon' => 'bi-bag'];
                     $imgSrc   = getImageSrc($item['image'] ?? '', '../../assets/images/items/');
                 ?>
-                    <div class="product-card" onclick="openModal(<?= $item['item_id'] ?>, '<?= addslashes(htmlspecialchars($item['name'])) ?>', '<?= addslashes(htmlspecialchars($item['category'])) ?>', <?= $item['price'] ?>, '<?= addslashes($imgSrc ?: '') ?>', '<?= addslashes($catStyle['grad']) ?>', '<?= addslashes($catStyle['icon']) ?>', <?= $item['stock'] ?>, '<?= addslashes(htmlspecialchars($item['unit'] ?? '')) ?>', '<?= addslashes(htmlspecialchars($item['description'] ?? '')) ?>')" style="cursor:pointer;">
+                    <div class="product-card" onclick="openModal(<?= $item['item_id'] ?>, '<?= addslashes(htmlspecialchars($item['name'])) ?>', '<?= addslashes(htmlspecialchars($item['category'])) ?>', <?= $item['price'] ?>, '<?= addslashes($imgSrc ?: '') ?>', '<?= addslashes($catStyle['grad']) ?>', '<?= addslashes($catStyle['icon']) ?>', <?= $item['stock'] ?>, '<?= addslashes(htmlspecialchars($item['unit'] ?? '')) ?>', '<?= addslashes(htmlspecialchars($item['description'] ?? '')) ?>')">
                         <div class="product-img-box" style="background:<?= $catStyle['grad'] ?>;">
                             <?php if ($imgSrc): ?>
                                 <img src="<?= htmlspecialchars($imgSrc) ?>" alt="<?= htmlspecialchars($item['name']) ?>">
@@ -363,9 +383,23 @@ $categories = $cat_result->fetch_all(MYSQLI_ASSOC);
                         </div>
                         <div class="product-body">
                             <div class="product-name"><?= htmlspecialchars($item['name']) ?></div>
-                            <div class="product-price">RM <?= number_format($item['price'], 2) ?></div>
+                            <div class="product-price-row">
+                                <span class="product-price">RM <?= number_format($item['price'], 2) ?></span>
+                                <?php if (!empty($item['unit'])): ?>
+                                    <span class="product-unit">/ <?= htmlspecialchars($item['unit']) ?></span>
+                                <?php endif; ?>
+                            </div>
+                            <?php
+                                $stock = (int)($item['stock'] ?? 0);
+                                $dotClass = $stock <= 5 ? 'low' : '';
+                                $stockText = $stock <= 5 ? 'Low stock' : 'In stock';
+                            ?>
+                            <div class="product-stock">
+                                <span class="stock-dot <?= $dotClass ?>"></span>
+                                <span class="stock-label"><?= $stockText ?></span>
+                            </div>
                             <button class="btn-cart" onclick="event.stopPropagation(); addToCart(event, <?= $item['item_id'] ?>, this)" <?= !$isLoggedIn ? "data-guest='1'" : '' ?>>
-                                <i class="bi bi-cart-plus"></i> Add to Cart
+                                <i class="bi bi-bag-plus"></i> Add to Bag
                             </button>
                         </div>
                     </div>
@@ -380,7 +414,11 @@ $categories = $cat_result->fetch_all(MYSQLI_ASSOC);
     </div>
 </div>
 
-<?php include 'item_modal.php'; ?>
+<?php
+$cartUrl = 'cart.php';
+$cartPath = 'addtocart.php';
+include 'item_modal.php';
+?>
 
 <a href="cart.php" class="floating-cart position-fixed text-white text-decoration-none d-flex align-items-center gap-3">
     <i class="bi bi-bag-fill fs-5"></i>
@@ -445,17 +483,20 @@ async function addToCart(e, itemId, btn) {
             }
         } else {
             btn.style.background = 'linear-gradient(135deg,#e17055,#d63031)';
+            btn.style.color = 'white';
             btn.innerHTML = '<i class="bi bi-exclamation-circle"></i> Failed';
         }
     } catch (err) {
         btn.style.background = 'linear-gradient(135deg,#e17055,#d63031)';
+        btn.style.color = 'white';
         btn.innerHTML = '<i class="bi bi-exclamation-circle"></i> Error';
     }
 
     setTimeout(() => {
         btn.classList.remove('adding');
         btn.style.background = '';
-        btn.innerHTML = '<i class="bi bi-cart-plus"></i> Add to Cart';
+        btn.style.color = '';
+        btn.innerHTML = '<i class="bi bi-bag-plus"></i> Add to Bag';
     }, 1800);
 }
 

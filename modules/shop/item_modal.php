@@ -49,13 +49,14 @@
     font-size:5rem; color:white; opacity:0.85;
     animation:fadeUp 0.4s ease 0.15s both;
 }
-.modal-stock-badge {
-    position:absolute; bottom:14px; left:14px;
-    padding:5px 14px; border-radius:100px;
-    font-size:0.7rem; font-weight:800;
-    text-transform:uppercase; letter-spacing:0.5px;
-    animation:fadeUp 0.4s ease 0.2s both;
+.modal-stock {
+    display:flex; align-items:center; gap:4px;
+    animation:fadeUp 0.4s ease 0.28s both;
 }
+.modal-stock-dot { width:6px; height:6px; border-radius:50%; background:#00b894; flex-shrink:0; }
+.modal-stock-dot.low { background:#fdcb6e; }
+.modal-stock-dot.out { background:#d63031; }
+.modal-stock-label { font-size:0.65rem; font-weight:600; color:#b2bec3; letter-spacing:0.2px; }
 .modal-close-btn {
     position:absolute; top:14px; right:14px; z-index:10;
     background:rgba(255,255,255,0.92); border:none;
@@ -88,7 +89,7 @@
     background:linear-gradient(135deg,#FF6B6B,#FF8E53);
     background:var(--primary-grad); background-clip:text;
     -webkit-background-clip:text; -webkit-text-fill-color:transparent;
-    color:#FF6B6B; /* fallback untuk browser lama */
+    color:#FF6B6B;
 }
 .modal-unit { font-size:0.8rem; color:#bdc3c7; font-weight:600; }
 .modal-desc {
@@ -119,9 +120,10 @@
 .modal-qty-wrap input::-webkit-outer-spin-button,
 .modal-qty-wrap input::-webkit-inner-spin-button { -webkit-appearance:none; margin:0; }
 .modal-qty-wrap input[type=number] { -moz-appearance:textfield; appearance:textfield; }
+
+/* ── BUTTONS ── */
 .modal-btn-add {
     width:100%; padding:13px; border:none; border-radius:14px;
-    background:linear-gradient(135deg,#FF6B6B,#FF8E53);
     background:var(--primary-grad); color:white;
     font-weight:800; font-size:0.9rem;
     font-family:'Plus Jakarta Sans',sans-serif;
@@ -130,19 +132,20 @@
     margin-bottom:0.6rem;
     animation:fadeUp 0.4s ease 0.32s both;
 }
-.modal-btn-add:hover:not(:disabled) { opacity:0.88; transform:translateY(-2px); box-shadow:0 10px 26px rgba(255,107,107,0.3); }
+.modal-btn-add:hover:not(:disabled) { opacity:0.88; transform:translateY(-3px); box-shadow:0 10px 26px rgba(255,107,107,0.3); }
 .modal-btn-add:disabled { opacity:0.55; cursor:not-allowed; }
 .modal-btn-add.success { background:linear-gradient(135deg,#00b894,#00cec9) !important; }
 .modal-btn-add.success i { animation:pulse 0.4s ease; }
+
 .modal-btn-cart {
     width:100%; padding:11px; border:1.5px solid #eee; border-radius:14px;
     background:white; color:#1A1C1E; font-weight:700; font-size:0.88rem;
     font-family:'Plus Jakarta Sans',sans-serif;
-    cursor:pointer; transition:0.2s; text-decoration:none;
+    cursor:pointer; transition:all 0.2s ease; text-decoration:none;
     display:flex; align-items:center; justify-content:center; gap:8px;
     animation:fadeUp 0.4s ease 0.35s both;
 }
-.modal-btn-cart:hover { border-color:#1A1C1E; color:#1A1C1E; }
+.modal-btn-cart:hover { border-color:#1A1C1E; background:#1A1C1E; color:white; }
 </style>
 
 <!-- Modal -->
@@ -155,7 +158,6 @@
         <div class="modal-img-wrap" id="modalImgBox">
             <img id="modalImg" src="" alt="" style="display:none;">
             <i id="modalIcon" class="bi" style="display:none;"></i>
-            <span id="modalStockBadge" class="modal-stock-badge"></span>
         </div>
 
         <div class="modal-body">
@@ -164,6 +166,10 @@
             <div class="modal-price-row">
                 <span class="modal-price" id="modalPrice"></span>
                 <span class="modal-unit"  id="modalUnit"></span>
+            </div>
+            <div class="modal-stock">
+                <span class="modal-stock-dot" id="modalStockDot"></span>
+                <span class="modal-stock-label" id="modalStockLabel"></span>
             </div>
             <p class="modal-desc" id="modalDesc"></p>
 
@@ -177,7 +183,7 @@
             </div>
 
             <button class="modal-btn-add" id="modalAddBtn" onclick="addToCartModal()">
-                <i class="bi bi-cart-plus"></i> Add to Cart
+                <i class="bi bi-bag-plus"></i> Add to Bag
             </button>
             <a href="<?= isset($cartUrl) ? $cartUrl : 'cart.php' ?>" class="modal-btn-cart">
                 <i class="bi bi-bag"></i> View Cart
@@ -208,17 +214,15 @@ function openModal(id, name, cat, price, imgSrc, grad, icon, stock, unit, desc) 
     }
     document.getElementById('modalImgBox').style.background = grad;
 
-    const badge = document.getElementById('modalStockBadge');
-    badge.style.cssText = 'position:absolute;bottom:14px;left:14px;padding:5px 14px;border-radius:100px;font-size:0.7rem;font-weight:800;text-transform:uppercase;letter-spacing:0.5px;';
+    const dot   = document.getElementById('modalStockDot');
+    const label = document.getElementById('modalStockLabel');
+    dot.className = 'modal-stock-dot';
     if (stock <= 0) {
-        badge.textContent = 'Out of stock';
-        badge.style.background = 'rgba(255,107,107,0.18)'; badge.style.color = '#ff6b6b';
+        dot.classList.add('out'); label.textContent = 'Out of stock';
     } else if (stock <= 5) {
-        badge.textContent = 'Low stock — ' + stock + ' left';
-        badge.style.background = 'rgba(253,203,110,0.22)'; badge.style.color = '#e17055';
+        dot.classList.add('low'); label.textContent = 'Low stock — ' + stock + ' left';
     } else {
-        badge.textContent = 'In stock';
-        badge.style.background = 'rgba(68, 160, 94, 0.18)'; badge.style.color = '#40c356';
+        label.textContent = 'In stock';
     }
 
     document.getElementById('modalCat').textContent   = cat;
@@ -233,9 +237,10 @@ function openModal(id, name, cat, price, imgSrc, grad, icon, stock, unit, desc) 
     btn.disabled         = (stock <= 0);
     btn.className        = 'modal-btn-add';
     btn.style.background = '';
+    btn.style.color      = '';
     btn.innerHTML        = stock <= 0
         ? '<i class="bi bi-x-circle"></i> Out of Stock'
-        : '<i class="bi bi-cart-plus"></i> Add to Cart';
+        : '<i class="bi bi-bag-plus"></i> Add to Bag';
 
     document.getElementById('itemModal').classList.add('open');
     document.body.style.overflow = 'hidden';
@@ -293,21 +298,30 @@ async function addToCartModal() {
             if (cartBadge) {
                 cartBadge.style.display = 'inline-flex';
                 cartBadge.textContent = parseInt(cartBadge.textContent || 0) + qty;
-            }
-            const countEl = document.querySelector('.floating-cart .cart-count');
-            if (countEl) {
-                countEl.textContent = parseInt(countEl.textContent || 0) + qty;
+            } else {
+                const countEl = document.querySelector('.floating-cart .cart-count');
+                if (countEl) {
+                    countEl.textContent = parseInt(countEl.textContent || 0) + qty;
+                } else {
+                    const span = document.querySelector('.floating-cart span.fw-bold');
+                    if (span) {
+                        const b = document.createElement('span');
+                        b.className = 'cart-count ms-1'; b.textContent = qty;
+                        span.appendChild(b);
+                    }
+                }
             }
 
-            setTimeout(() => { btn.classList.remove('success'); btn.innerHTML = orig; btn.disabled = false; }, 1800);
+            setTimeout(() => { btn.classList.remove('success'); btn.innerHTML = orig; btn.disabled = false; btn.style.background = ''; btn.style.color = ''; }, 1800);
         } else {
-            btn.style.background = 'linear-gradient(135deg,#e17055,#d63031)';
+            btn.style.background = '#F8F9FA';
+            btn.style.color = '#e17055';
             btn.innerHTML = '<i class="bi bi-exclamation-circle"></i> Failed';
-            setTimeout(() => { btn.innerHTML = orig; btn.style.background = ''; btn.disabled = false; }, 1800);
+            setTimeout(() => { btn.innerHTML = orig; btn.style.background = ''; btn.style.color = ''; btn.disabled = false; }, 1800);
         }
     } catch (err) {
         btn.innerHTML = '<i class="bi bi-exclamation-circle"></i> Error';
-        setTimeout(() => { btn.innerHTML = orig; btn.style.background = ''; btn.disabled = false; }, 1800);
+        setTimeout(() => { btn.innerHTML = orig; btn.style.background = ''; btn.style.color = ''; btn.disabled = false; }, 1800);
     }
 }
 </script>
