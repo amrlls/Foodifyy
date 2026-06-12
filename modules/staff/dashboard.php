@@ -87,16 +87,32 @@ $recent_orders = $recent ? $recent->fetch_all(MYSQLI_ASSOC) : [];
         .sales-box .amount { font-size: 1.5rem; font-weight: 900; }
 
         .alert-card { background: white; border-radius: 22px; padding: 1.8rem; border-left: 4px solid #FF9800; box-shadow: 0 4px 20px rgba(0,0,0,0.04); margin-bottom: 1.5rem; }
-        .stock-item { display: flex; justify-content: space-between; align-items: center; padding: 0.6rem 0.8rem; background: #f8f9fa; border-radius: 12px; }
+        .stock-item {
+            display: flex; justify-content: space-between; align-items: center;
+            padding: 0.9rem 1rem; background: #fffbf5;
+            border-radius: 14px; border: 1px solid rgba(255,152,0,0.15);
+            transition: 0.2s;
+        }
+        .stock-item:hover { background: #fff3e0; transform: translateY(-1px); box-shadow: 0 4px 12px rgba(255,152,0,0.1); }
+        .stock-item .item-name { font-weight: 700; font-size: 0.88rem; color: #1A1C1E; }
+        .stock-pill {
+            display: inline-flex; align-items: center; gap: 5px;
+            padding: 4px 12px; border-radius: 100px; font-size: 0.75rem; font-weight: 800;
+        }
+        .stock-pill.critical { background: rgba(214,48,49,0.12); color: #d63031; }
+        .stock-pill.low      { background: rgba(253,203,110,0.25); color: #e17055; }
+        .stock-pill.ok       { background: rgba(46,204,113,0.12);  color: #27ae60; }
 
         .order-card { background: white; border-radius: 16px; padding: 1rem 1.2rem; border: 1px solid #f0f0f0; margin-bottom: 0.6rem; transition: 0.2s; }
         .order-card:hover { box-shadow: 0 8px 20px rgba(0,0,0,0.06); transform: translateY(-1px); }
+        .order-card code { background: var(--primary-grad); background-clip: text; -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
 
         .status-badge { padding: 4px 12px; border-radius: 20px; font-size: 0.7rem; font-weight: 700; display: inline-flex; align-items: center; justify-content: center; gap: 6px; text-transform: uppercase; width: 110px; }
         .status-badge::before { content: ''; width: 8px; height: 8px; border-radius: 50%; background: currentColor; flex-shrink: 0; }
         .status-pending    { background: rgba(116,185,255,0.15); color: #0984e3; }
         .status-processing { background: rgba(253,203,110,0.2);  color: #e17055; }
         .status-completed  { background: rgba(46,204,113,0.12);  color: #27ae60; }
+        .status-cancelled  { background: rgba(214,48,49,0.12);   color: #d63031; }
 
         .btn-view { background: #1A1C1E; color: white; padding: 6px 16px; border-radius: 10px; font-size: 0.75rem; font-weight: 700; text-decoration: none; display: inline-block; transition: 0.2s; }
         .btn-view:hover { background: var(--accent); color: white; }
@@ -157,7 +173,6 @@ $recent_orders = $recent ? $recent->fetch_all(MYSQLI_ASSOC) : [];
         </div>
     </div>
 
-    <!-- Stats -->
     <div class="row g-3 mb-3">
         <div class="col-md-3">
             <div class="stat-card">
@@ -193,7 +208,6 @@ $recent_orders = $recent ? $recent->fetch_all(MYSQLI_ASSOC) : [];
         </div>
     </div>
 
-    <!-- Sales Overview -->
     <div class="section-card">
         <h5><i class="bi bi-graph-up me-2"></i>Sales Overview</h5>
         <div class="row g-3">
@@ -218,19 +232,27 @@ $recent_orders = $recent ? $recent->fetch_all(MYSQLI_ASSOC) : [];
         </div>
     </div>
 
-    <!-- Low Stock Alert -->
     <?php if (!empty($low_stock_items)): ?>
+    <div class="section-header" style="margin-bottom:1rem;">
+        <h5><i class="bi bi-exclamation-triangle text-warning me-2"></i>Low Stock Alert</h5>
+        <a href="manage_items.php" class="btn-view">Manage Items →</a>
+    </div>
     <div class="alert-card">
-        <div class="d-flex justify-content-between align-items-center mb-3">
-            <h5 class="fw-bold mb-0"><i class="bi bi-exclamation-triangle text-warning me-2"></i>Low Stock Alert</h5>
-            <a href="manage_items.php" class="btn-view">Manage Stock →</a>
-        </div>
         <div class="row g-2">
-            <?php foreach ($low_stock_items as $item): ?>
+            <?php foreach ($low_stock_items as $item):
+                $pillClass = $item['stock'] <= 3 ? 'critical' : ($item['stock'] <= 6 ? 'low' : 'ok');
+                $pillIcon  = $item['stock'] <= 3 ? 'bi-exclamation-circle-fill' : ($item['stock'] <= 6 ? 'bi-dash-circle-fill' : 'bi-check-circle-fill');
+            ?>
             <div class="col-md-4">
                 <div class="stock-item">
-                    <span class="fw-600"><?= htmlspecialchars($item['name']) ?></span>
-                    <span class="fw-bold text-warning">Stock: <?= $item['stock'] ?> <?= $item['unit'] ?></span>
+                    <div class="d-flex align-items-center gap-2">
+                        <i class="bi bi-bag-heart" style="color:#FF8E53;font-size:1rem;"></i>
+                        <span class="item-name"><?= htmlspecialchars($item['name']) ?></span>
+                    </div>
+                    <span class="stock-pill <?= $pillClass ?>">
+                        <i class="bi <?= $pillIcon ?>"></i>
+                        <?= $item['stock'] ?>
+                    </span>
                 </div>
             </div>
             <?php endforeach; ?>
@@ -238,7 +260,6 @@ $recent_orders = $recent ? $recent->fetch_all(MYSQLI_ASSOC) : [];
     </div>
     <?php endif; ?>
 
-    <!-- Recent Orders -->
     <div class="section-header">
         <h5>Recent Orders</h5>
         <a href="manage_orders.php" class="btn-view">Manage Orders →</a>
@@ -249,6 +270,7 @@ $recent_orders = $recent ? $recent->fetch_all(MYSQLI_ASSOC) : [];
             'pending'    => 'status-pending',
             'processing' => 'status-processing',
             'completed'  => 'status-completed',
+            'cancelled'  => 'status-cancelled',
             default      => 'status-pending'
         };
     ?>
