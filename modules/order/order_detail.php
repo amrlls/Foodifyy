@@ -12,6 +12,38 @@ $userId  = $_SESSION['user_id'];
 $orderId = intval($_GET['id'] ?? 0);
 if (!$orderId) { header('Location: my_orders.php'); exit; }
 
+// Handle cancel order
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['action'] === 'cancel_order') {
+    $cancelId = intval($_POST['order_id'] ?? 0);
+    if ($cancelId && $cancelId === $orderId) {
+        // Only allow cancel if pending
+        $chk = $conn->prepare("SELECT status FROM orders WHERE order_id = ? AND user_id = ?");
+        $chk->bind_param("ii", $cancelId, $userId);
+        $chk->execute();
+        $chkRow = $chk->get_result()->fetch_assoc();
+        if ($chkRow && $chkRow['status'] === 'pending') {
+            $upd = $conn->prepare("UPDATE orders SET status = 'cancelled' WHERE order_id = ? AND user_id = ?");
+            $upd->bind_param("ii", $cancelId, $userId);
+            $upd->execute();
+            $updPay = $conn->prepare("UPDATE payments SET status = 'failed' WHERE order_id = ? AND status != 'success'");
+            $updPay->bind_param("i", $cancelId);
+            $updPay->execute();
+            // Restore stock
+            $stmtItems = $conn->prepare("SELECT item_id, quantity FROM order_items WHERE order_id = ?");
+            $stmtItems->bind_param("i", $cancelId);
+            $stmtItems->execute();
+            $cancelItems = $stmtItems->get_result()->fetch_all(MYSQLI_ASSOC);
+            foreach ($cancelItems as $ci) {
+                $stmtStock = $conn->prepare("UPDATE items SET stock = stock + ? WHERE item_id = ?");
+                $stmtStock->bind_param("ii", $ci['quantity'], $ci['item_id']);
+                $stmtStock->execute();
+            }
+            header("Location: order_detail.php?id=$orderId&cancelled=1");
+            exit;
+        }
+    }
+}
+
 // Nav info
 $nav_profile_img = "";
 $nav_role = "Customer";
@@ -70,6 +102,7 @@ $catColors = [
 ];
 
 $isPendingOnline = ($order['status'] === 'pending' && $order['method'] === 'online_banking' && $order['transaction_ref']);
+$isCancellable   = ($order['status'] === 'pending');
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -124,8 +157,6 @@ $isPendingOnline = ($order['status'] === 'pending' && $order['method'] === 'onli
         .user-card:hover { background: rgba(255,255,255,0.07); transform: translateY(-2px); }
 
         .main-content { margin-left: var(--sidebar-w); padding: 0; min-height: 100vh; background: white; }
-
-        /* Breadcrumb */
         .breadcrumb-bar {
             padding: 1.2rem 4rem; border-bottom: 1px solid #f5f5f5;
             display: flex; align-items: center; gap: 8px;
@@ -134,10 +165,8 @@ $isPendingOnline = ($order['status'] === 'pending' && $order['method'] === 'onli
         .breadcrumb-bar a:hover { color: var(--accent); }
         .breadcrumb-bar span { color: #bdc3c7; font-size: 0.85rem; }
         .breadcrumb-bar .current { color: #1A1C1E; font-weight: 700; }
-
         .content-body { padding: 2.5rem 4rem; }
 
-        /* Info card */
         .info-card {
             background: white; border-radius: 20px; padding: 1.8rem;
             border: 1px solid #f0f0f0; box-shadow: var(--card-shadow);
@@ -148,17 +177,16 @@ $isPendingOnline = ($order['status'] === 'pending' && $order['method'] === 'onli
             letter-spacing: 1px; color: #bdc3c7; margin-bottom: 1.2rem;
         }
 
-        /* Status badge */
         .status-badge {
             padding: 6px 16px; border-radius: 100px;
             font-size: 0.75rem; font-weight: 800; text-transform: uppercase;
             display: inline-flex; align-items: center; gap: 6px;
         }
-        .status-badge.pending    { background: rgba(116,185,255,0.15); color: #0984e3; }
-        .status-badge.processing { background: rgba(253,203,110,0.2);  color: #e17055; }
-        .status-badge.completed  { background: rgba(46,204,113,0.12); color: #27ae60; }
+        .status-badge.pending    { background: rgba(116,185,255,0.15) !important; color: #0984e3 !important; }
+        .status-badge.processing { background: rgba(253,203,110,0.2) !important;  color: #e17055 !important; }
+        .status-badge.completed  { background: rgba(46,204,113,0.12) !important;  color: #27ae60 !important; }
+        .status-badge.cancelled  { background: rgba(214,48,49,0.12) !important;   color: #d63031 !important; }
 
-        /* Detail rows */
         .detail-row {
             display: flex; justify-content: space-between; align-items: center;
             padding: 0.65rem 0; border-bottom: 1px solid #f8f9fa; font-size: 0.88rem;
@@ -167,7 +195,6 @@ $isPendingOnline = ($order['status'] === 'pending' && $order['method'] === 'onli
         .detail-row .label { color: #7f8c8d; font-weight: 600; }
         .detail-row .value { font-weight: 700; color: #1A1C1E; text-align: right; }
 
-        /* Order items */
         .order-item {
             display: flex; align-items: center; gap: 1rem;
             padding: 0.9rem 0; border-bottom: 1px solid #f8f9fa;
@@ -186,7 +213,6 @@ $isPendingOnline = ($order['status'] === 'pending' && $order['method'] === 'onli
             -webkit-background-clip: text; -webkit-text-fill-color: transparent;
         }
 
-        /* Summary totals */
         .total-row {
             display: flex; justify-content: space-between;
             font-size: 0.88rem; margin-bottom: 0.5rem;
@@ -199,7 +225,6 @@ $isPendingOnline = ($order['status'] === 'pending' && $order['method'] === 'onli
             -webkit-background-clip: text; -webkit-text-fill-color: transparent;
         }
 
-        /* Pay Now button */
         .btn-pay-now {
             width: 100%; padding: 14px; border: none; border-radius: 16px;
             background: var(--primary-grad); color: white;
@@ -211,7 +236,54 @@ $isPendingOnline = ($order['status'] === 'pending' && $order['method'] === 'onli
         }
         .btn-pay-now:hover { opacity: 0.88; transform: translateY(-2px); color: white; }
 
-        /* Floating bag */
+        .btn-cancel-order {
+            width: 100%; padding: 13px; border: 1.5px solid #ffcdd2; border-radius: 16px;
+            background: rgba(225,112,85,0.06); color: #d63031;
+            font-weight: 700; font-size: 0.88rem;
+            font-family: 'Plus Jakarta Sans', sans-serif;
+            cursor: pointer; transition: 0.3s;
+            display: flex; align-items: center; justify-content: center; gap: 8px;
+            margin-top: 0.8rem;
+        }
+        .btn-cancel-order:hover { background: #d63031; color: white; border-color: #d63031; }
+
+        /* Cancel confirm overlay */
+        .cancel-overlay {
+            position: fixed; inset: 0; background: rgba(0,0,0,0.6);
+            backdrop-filter: blur(8px); z-index: 10000;
+            display: none; align-items: center; justify-content: center;
+        }
+        .cancel-overlay.active { display: flex; }
+        .cancel-box {
+            background: white; padding: 2.5rem; border-radius: 32px;
+            width: 90%; max-width: 420px; text-align: center;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.2);
+            animation: popIn 0.25s cubic-bezier(0.34,1.56,0.64,1);
+        }
+        @keyframes popIn { from { transform:scale(0.9); opacity:0; } to { transform:scale(1); opacity:1; } }
+        .btn-confirm-cancel {
+            width: 100%; padding: 13px; border: none; border-radius: 14px;
+            background: linear-gradient(135deg,#e17055,#d63031); color: white;
+            font-weight: 800; font-size: 0.9rem; cursor: pointer;
+            font-family: 'Plus Jakarta Sans', sans-serif; margin-bottom: 0.6rem;
+        }
+        .btn-cancel-back {
+            width: 100%; padding: 12px; border: 1.5px solid #eee; border-radius: 14px;
+            background: white; color: #1A1C1E; font-weight: 700; font-size: 0.88rem;
+            cursor: pointer; font-family: 'Plus Jakarta Sans', sans-serif;
+        }
+
+        /* Toast */
+        .toast-msg {
+            position: fixed; top: 1.5rem; right: 1.5rem; z-index: 9999;
+            background: white; border-radius: 16px; padding: 14px 20px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.12); font-weight: 700; font-size: 0.88rem;
+            display: flex; align-items: center; gap: 10px;
+            animation: slideDown 0.3s ease;
+        }
+        .toast-msg.cancelled { color: #d63031; border-left: 4px solid #d63031; }
+        @keyframes slideDown { from { opacity:0; transform:translateY(-10px); } to { opacity:1; transform:translateY(0); } }
+
         .floating-cart {
             background: var(--sidebar-dark); padding: 1rem 1.8rem;
             border-radius: 50px; box-shadow: 0 10px 30px rgba(0,0,0,0.2);
@@ -219,134 +291,71 @@ $isPendingOnline = ($order['status'] === 'pending' && $order['method'] === 'onli
         }
         .floating-cart:hover { background: #2d2f31; transform: translateY(-3px); }
 
-        @media (max-width: 992px) {
-    .breadcrumb-bar, .content-body { padding: 1.5rem 2rem; }
-}
-
-/* Mobile Topbar */
-.topbar {
-    display: none;
-    position: fixed;
-    top: 0;
-    left: 0;
-    right: 0;
-    z-index: 999;
-    background: var(--sidebar-dark);
-    padding: 1rem 1.5rem;
-    align-items: center;
-    justify-content: space-between;
-}
-
-.topbar-logo {
-    font-family: 'Playfair Display', serif;
-    font-weight: 900;
-    font-size: 1.5rem;
-    letter-spacing: -1px;
-    background: var(--primary-grad);
-    background-clip: text;
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
-}
-
-.hamburger {
-    background: none;
-    border: none;
-    color: white;
-    font-size: 1.4rem;
-    cursor: pointer;
-    padding: 4px;
-}
-
-.sidebar-overlay {
-    display: none;
-    position: fixed;
-    inset: 0;
-    background: rgba(0,0,0,.5);
-    z-index: 998;
-}
-
-.sidebar-overlay.active {
-    display: block;
-}
-
-@media (max-width: 768px) {
-
-    .topbar {
-        display: flex;
-    }
-
-    .sidebar {
-        transform: translateX(-100%);
-        transition: transform .3s ease;
-        padding-top: 1.5rem;
-    }
-
-    .sidebar.open {
-        transform: translateX(0);
-    }
-
-    .main-content {
-        margin-left: 0;
-        padding-top: 5rem;
-    }
-
-    .header-section {
-        padding: 1rem;
-    }
-
-    .content-body {
-        padding: 1rem;
-    }
-
-    .top-bar h1 {
-        font-size: 2rem;
-    }
-
-    .order-header {
-        flex-direction: column;
-        align-items: flex-start;
-        gap: .8rem;
-    }
-
-    .order-meta {
-        flex-direction: column;
-        gap: 1rem;
-        width: 100%;
-    }
-
-    .order-card .d-flex.align-items-center.justify-content-between {
-        flex-direction: column;
-        align-items: flex-start !important;
-        gap: 1rem;
-    }
-
-    .btn-pay-now {
-        width: 100%;
-        justify-content: center;
-        margin-left: 0 !important;
-    }
-
-    .floating-cart {
-        bottom: 20px;
-        right: 16px;
-        padding: .8rem 1.2rem;
-    }
-}
+        @media (max-width: 992px) { .breadcrumb-bar, .content-body { padding: 1.5rem 2rem; } }
+        .topbar { display: none; position: fixed; top: 0; left: 0; right: 0; z-index: 999; background: var(--sidebar-dark); padding: 1rem 1.5rem; align-items: center; justify-content: space-between; }
+        .topbar-logo { font-family: 'Playfair Display', serif; font-weight: 900; font-size: 1.5rem; letter-spacing: -1px; background: var(--primary-grad); background-clip: text; -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+        .hamburger { background: none; border: none; color: white; font-size: 1.4rem; cursor: pointer; padding: 4px; }
+        .sidebar-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,.5); z-index: 998; }
+        .sidebar-overlay.active { display: block; }
+        @media (max-width: 768px) {
+            .topbar { display: flex; }
+            .sidebar { transform: translateX(-100%); transition: transform .3s ease; padding-top: 1.5rem; }
+            .sidebar.open { transform: translateX(0); }
+            .main-content { margin-left: 0; padding-top: 5rem; }
+            .content-body { padding: 1rem; }
+            .floating-cart { bottom: 20px; right: 16px; padding: .8rem 1.2rem; }
+        }
     </style>
 </head>
 <body>
+
+<?php if (isset($_GET['cancelled'])): ?>
+<!-- Cancelled Order Popup — shows only after cancel action -->
+<div class="cancel-overlay active" id="cancelledPopup">
+    <div class="cancel-box">
+        <div class="mb-3">
+            <div style="width:80px;height:80px;border-radius:50%;background:rgba(214,48,49,0.1);display:flex;align-items:center;justify-content:center;margin:0 auto;">
+                <i class="bi bi-x-circle-fill" style="font-size:2.5rem;color:#d63031;"></i>
+            </div>
+        </div>
+        <h4 class="fw-bold mb-2">Order Cancelled</h4>
+        <p class="text-muted mb-1" style="font-size:0.9rem;">Order #<?= str_pad($orderId, 6, '0', STR_PAD_LEFT) ?> has been cancelled.</p>
+        <p class="text-muted mb-4" style="font-size:0.85rem;">Payment status has been marked as failed.</p>
+        <a href="my_orders.php" class="btn-confirm-cancel text-decoration-none d-flex align-items-center justify-content-center gap-2">
+            <i class="bi bi-receipt"></i> Back to My Orders
+        </a>
+        <button class="btn-cancel-back mt-2" onclick="document.getElementById('cancelledPopup').classList.remove('active')">View Order Details</button>
+    </div>
+</div>
+<?php endif; ?>
+
+<!-- Cancel Confirm Overlay -->
+<div class="cancel-overlay" id="cancelOverlay">
+    <div class="cancel-box">
+        <div class="mb-3">
+            <div style="width:72px;height:72px;border-radius:50%;background:rgba(214,48,49,0.1);display:flex;align-items:center;justify-content:center;margin:0 auto;">
+                <i class="bi bi-x-circle-fill" style="font-size:2.2rem;color:#d63031;"></i>
+            </div>
+        </div>
+        <h4 class="fw-bold mb-2">Cancel Order?</h4>
+        <p class="text-muted mb-4" style="font-size:0.9rem;">This action cannot be undone. Payment status will be marked as failed.</p>
+        <form method="POST">
+            <input type="hidden" name="action" value="cancel_order">
+            <input type="hidden" name="order_id" value="<?= $orderId ?>">
+            <button type="submit" class="btn-confirm-cancel"><i class="bi bi-x-circle me-2"></i>Yes, Cancel Order</button>
+        </form>
+        <button class="btn-cancel-back" onclick="document.getElementById('cancelOverlay').classList.remove('active')">Keep Order</button>
+    </div>
+</div>
+
 <div class="topbar">
     <span class="topbar-logo">foodify.</span>
-
     <button class="hamburger" onclick="toggleSidebar()">
         <i class="bi bi-list" id="hamburgerIcon"></i>
     </button>
 </div>
 
-<div class="sidebar-overlay"
-     id="sidebarOverlay"
-     onclick="toggleSidebar()"></div>
-
+<div class="sidebar-overlay" id="sidebarOverlay" onclick="toggleSidebar()"></div>
 
 <div class="sidebar">
     <div class="sidebar-logo"><h2>foodify.</h2></div>
@@ -382,8 +391,6 @@ $isPendingOnline = ($order['status'] === 'pending' && $order['method'] === 'onli
 </div>
 
 <div class="main-content">
-
-
     <div class="content-body">
         <div class="row g-4">
 
@@ -413,6 +420,12 @@ $isPendingOnline = ($order['status'] === 'pending' && $order['method'] === 'onli
                         <i class="bi bi-lock-fill"></i> Complete Payment
                     </a>
                     <?php endif; ?>
+
+                    <?php if ($isCancellable): ?>
+                    <button class="btn-cancel-order" onclick="document.getElementById('cancelOverlay').classList.add('active')">
+                        <i class="bi bi-x-circle"></i> Cancel Order
+                    </button>
+                    <?php endif; ?>
                 </div>
 
                 <!-- Items -->
@@ -441,7 +454,6 @@ $isPendingOnline = ($order['status'] === 'pending' && $order['method'] === 'onli
                     </div>
                     <?php endforeach; ?>
 
-                    <!-- Totals -->
                     <div class="mt-3">
                         <?php $subtotal = array_sum(array_map(fn($r) => $r['unit_price'] * $r['quantity'], $orderItems)); ?>
                         <div class="total-row">
@@ -499,8 +511,8 @@ $isPendingOnline = ($order['status'] === 'pending' && $order['method'] === 'onli
                         <span class="value">
                             <?php if ($order['pay_status'] === 'success' || ($order['method'] === 'cod' && $order['status'] === 'completed')): ?>
                                 <span style="color:#27ae60;font-weight:800;">Paid</span>
-                            <?php elseif ($order['pay_status'] === 'failed'): ?>
-                                <span style="color:#e17055;font-weight:800;">Failed</span>
+                            <?php elseif ($order['pay_status'] === 'failed' || $order['status'] === 'cancelled'): ?>
+                                <span style="color:#d63031;font-weight:800;">Failed</span>
                             <?php else: ?>
                                 <span style="color:#0984e3;font-weight:800;">Pending</span>
                             <?php endif; ?>
@@ -538,28 +550,20 @@ $isPendingOnline = ($order['status'] === 'pending' && $order['method'] === 'onli
         <?php endif; ?>
     </span>
 </a>
+
 <script>
 function toggleSidebar() {
     const sidebar = document.querySelector('.sidebar');
     const overlay = document.getElementById('sidebarOverlay');
     const icon = document.getElementById('hamburgerIcon');
-
     const isOpen = sidebar.classList.toggle('open');
-
     overlay.classList.toggle('active', isOpen);
-
-    icon.className = isOpen
-        ? 'bi bi-x-lg'
-        : 'bi bi-list';
+    icon.className = isOpen ? 'bi bi-x-lg' : 'bi bi-list';
 }
-
 document.querySelectorAll('.sidebar-nav a').forEach(link => {
     link.addEventListener('click', () => {
         const sidebar = document.querySelector('.sidebar');
-
-        if (sidebar.classList.contains('open')) {
-            toggleSidebar();
-        }
+        if (sidebar.classList.contains('open')) toggleSidebar();
     });
 });
 </script>

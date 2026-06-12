@@ -10,7 +10,6 @@ if (!isset($_SESSION['user_id'])) {
 
 $userId = $_SESSION['user_id'];
 
-// Cart count
 $cartCount = 0;
 $stmt_cart = $conn->prepare("SELECT SUM(quantity) as total FROM cart WHERE user_id = ?");
 $stmt_cart->bind_param("i", $userId);
@@ -18,7 +17,6 @@ $stmt_cart->execute();
 $cart_row  = $stmt_cart->get_result()->fetch_assoc();
 $cartCount = (int)($cart_row['total'] ?? 0);
 
-// Nav info
 $nav_profile_img = "";
 $nav_role = "Customer";
 $username = 'Guest';
@@ -32,7 +30,6 @@ if ($user_nav) {
     $nav_role        = $user_nav['role'];
 }
 
-// Filter by status
 $statusFilter = $_GET['status'] ?? 'all';
 
 $where  = ["o.user_id = ?"];
@@ -116,24 +113,10 @@ $count  = count($orders);
 
         .main-content { margin-left: var(--sidebar-w); padding: 0; min-height: 100vh; background: white; }
         .header-section { padding: 3rem 4rem 2rem; background: white; border-bottom: 1px solid #f5f5f5; }
-        .top-bar h1 {
-            font-family: 'Playfair Display', serif;
-            font-size: 3.5rem;
-            font-weight: 900;
-            line-height: 1;
-            margin: 0;
-        }
-
-        .header-section {
-            padding: 3rem 4rem 2rem;
-            background: white;
-            border-bottom: 1px solid #f5f5f5;
-        }
+        .top-bar h1 { font-family: 'Playfair Display', serif; font-size: 3.5rem; font-weight: 900; line-height: 1; margin: 0; }
         .header-section p { color: #7f8c8d; font-size: 1rem; margin-top: 0.5rem; }
-
         .content-body { padding: 2rem 4rem; }
 
-        /* Filter tabs */
         .filter-tabs { display: flex; gap: 8px; margin-bottom: 2rem; flex-wrap: wrap; }
         .filter-tab {
             padding: 9px 22px; border-radius: 100px; border: 1.5px solid #eee;
@@ -143,7 +126,6 @@ $count  = count($orders);
         .filter-tab:hover { border-color: var(--accent); color: var(--accent); }
         .filter-tab.active { background: var(--primary-grad); border-color: transparent; color: white; }
 
-        /* Order card */
         .order-card {
             background: white; border-radius: 20px; padding: 1.5rem;
             border: 1px solid #f0f0f0; box-shadow: var(--card-shadow);
@@ -156,64 +138,31 @@ $count  = count($orders);
         .order-id { font-weight: 800; font-size: 0.95rem; color: #1A1C1E; }
         .order-date { font-size: 0.78rem; color: #bdc3c7; font-weight: 600; margin-top: 3px; }
 
-        /* Status badges */
         .status-badge {
-            padding: 4px 12px;
-            border-radius: 20px;
-            font-size: 0.7rem;
-            font-weight: 700;
-            display: inline-flex;
-            align-items: center;
-            justify-content: center;
-            gap: 6px;               
-            text-transform: uppercase;
-            width: 110px;
+            padding: 4px 12px; border-radius: 20px; font-size: 0.7rem; font-weight: 700;
+            display: inline-flex; align-items: center; justify-content: center;
+            gap: 6px; text-transform: uppercase; min-width: 110px;
         }
+        .status-badge::before { content: ''; width: 8px; height: 8px; border-radius: 50%; background: currentColor; flex-shrink: 0; }
+        .status-badge.pending    { background: rgba(116,185,255,0.15) !important; color: #0984e3 !important; }
+        .status-badge.processing { background: rgba(253,203,110,0.2)  !important; color: #e17055 !important; }
+        .status-badge.completed  { background: rgba(46,204,113,0.12)  !important; color: #27ae60 !important; }
+        .status-badge.cancelled  { background: rgba(214,48,49,0.12)   !important; color: #d63031 !important; }
 
-        /* Dot styling */
-        .status-badge::before {
-            content: '';
-            width: 8px;
-            height: 8px;
-            border-radius: 50%;
-            background: currentColor; 
-            flex-shrink: 0;  
-        }
-        .status-badge i { font-size: 0.5rem; }
-        .status-badge.pending    { background: rgba(116,185,255,0.15); color: #0984e3; }
-        .status-badge.processing { background: rgba(253,203,110,0.2);  color: #e17055; }
-        .status-badge.completed  { background: rgba(46, 204, 113, 0.12);color: #27ae60; }
-        
         .order-divider { border: none; border-top: 1px solid #f5f5f5; margin: 1rem 0; }
-
-        .order-meta {
-            display: flex;
-            gap: 2rem;
-            align-items: flex-start;
-            flex: 1;
-        }
+        .order-meta { display: flex; gap: 2rem; align-items: flex-start; flex: 1; }
         .meta-item { font-size: 0.82rem; }
         .meta-item .label { color: #bdc3c7; font-weight: 600; margin-bottom: 4px; font-size: 0.75rem; }
         .meta-item .value { font-weight: 800; color: #1A1C1E; }
-        .meta-item .value.price {
-            background: var(--primary-grad); background-clip: text;
-            -webkit-background-clip: text; -webkit-text-fill-color: transparent;
-        }
+        .meta-item .value.price { background: var(--primary-grad); background-clip: text; -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
 
-        /* Payment method badge */
-        .pay-badge {
-            display: inline-flex; align-items: center; gap: 6px;
-            padding: 5px 12px; border-radius: 100px; font-size: 0.72rem; font-weight: 700;
-            background: #f8f9fa; color: #7f8c8d;
-        }
+        .pay-badge { display: inline-flex; align-items: center; gap: 6px; padding: 5px 12px; border-radius: 100px; font-size: 0.72rem; font-weight: 700; background: #f8f9fa; color: #7f8c8d; }
 
-        /* Empty state */
         .empty-state { text-align: center; padding: 5rem 2rem; }
         .empty-state i { font-size: 4rem; color: #eee; display: block; margin-bottom: 1.5rem; }
         .empty-state h4 { font-weight: 800; color: #1A1C1E; margin-bottom: 0.5rem; }
         .empty-state p { color: #bdc3c7; font-size: 0.9rem; }
 
-        /* Pay Now button */
         .btn-pay-now {
             display: inline-flex; align-items: center; gap: 8px;
             padding: 12px 24px; border-radius: 14px;
@@ -223,161 +172,46 @@ $count  = count($orders);
             white-space: nowrap; flex-shrink: 0;
             box-shadow: 0 8px 20px rgba(255,107,107,0.25);
         }
-        .btn-pay-now:hover { opacity: 0.88; color: white; transform: translateY(-2px); box-shadow: 0 12px 28px rgba(255,107,107,0.35); }
+        .btn-pay-now:hover { opacity: 0.88; color: white; transform: translateY(-2px); }
 
-        .floating-cart {
-            background: var(--sidebar-dark); padding: 1rem 1.8rem;
-            border-radius: 50px; box-shadow: 0 10px 30px rgba(0,0,0,0.2);
-            z-index: 999; bottom: 30px; right: 30px; transition: 0.3s;
-        }
+        .floating-cart { background: var(--sidebar-dark); padding: 1rem 1.8rem; border-radius: 50px; box-shadow: 0 10px 30px rgba(0,0,0,0.2); z-index: 999; bottom: 30px; right: 30px; transition: 0.3s; }
         .floating-cart:hover { background: #2d2f31; transform: translateY(-3px); }
 
-        @media (max-width: 992px) {
-    .header-section,
-    .content-body {
-        padding: 2rem;
-    }
-}
-
-/* Mobile Topbar */
-.topbar {
-    display: none;
-    position: fixed;
-    top: 0;
-    left: 0;
-    right: 0;
-    z-index: 999;
-    background: var(--sidebar-dark);
-    padding: 1rem 1.5rem;
-    align-items: center;
-    justify-content: space-between;
-}
-
-.topbar-logo {
-    font-family: 'Playfair Display', serif;
-    font-weight: 900;
-    font-size: 1.5rem;
-    letter-spacing: -1px;
-    background: var(--primary-grad);
-    background-clip: text;
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
-}
-
-.hamburger {
-    background: none;
-    border: none;
-    color: white;
-    font-size: 1.4rem;
-    cursor: pointer;
-    padding: 4px;
-}
-
-.sidebar-overlay {
-    display: none;
-    position: fixed;
-    inset: 0;
-    background: rgba(0,0,0,.5);
-    z-index: 998;
-}
-
-.sidebar-overlay.active {
-    display: block;
-}
-
-@media (max-width:768px){
-
-    .topbar{
-        display:flex;
-    }
-
-    .sidebar{
-        transform:translateX(-100%);
-        transition:transform .3s ease;
-        padding-top:1.5rem;
-    }
-
-    .sidebar.open{
-        transform:translateX(0);
-    }
-
-    .main-content{
-        margin-left:0;
-        padding-top:5rem;
-    }
-
-    .header-section{
-        padding:1.1rem;
-    }
-
-    .content-body{
-        padding:1rem;
-    }
-
-    .top-bar h1{
-        font-size:2rem;
-    }
-
-    .filter-tabs{
-        overflow-x:auto;
-        flex-wrap:nowrap;
-        scrollbar-width:none;
-    }
-
-    .filter-tabs::-webkit-scrollbar{
-        display:none;
-    }
-
-    .filter-tab{
-        white-space:nowrap;
-        flex-shrink:0;
-    }
-
-    .order-header{
-        flex-direction:column;
-        align-items:flex-start;
-        gap:.8rem;
-    }
-
-    .order-meta{
-        flex-direction:column;
-        gap:1rem;
-        width:100%;
-    }
-
-    .order-card .d-flex.align-items-center.justify-content-between{
-        flex-direction:column;
-        align-items:flex-start!important;
-        gap:1rem;
-    }
-
-    .btn-pay-now{
-        width:100%;
-        justify-content:center;
-        margin-left:0!important;
-    }
-
-    .floating-cart{
-        bottom:20px;
-        right:16px;
-        padding:.8rem 1.2rem;
-    }
-}
+        @media (max-width: 992px) { .header-section, .content-body { padding: 2rem; } }
+        .topbar { display: none; position: fixed; top: 0; left: 0; right: 0; z-index: 999; background: var(--sidebar-dark); padding: 1rem 1.5rem; align-items: center; justify-content: space-between; }
+        .topbar-logo { font-family: 'Playfair Display', serif; font-weight: 900; font-size: 1.5rem; letter-spacing: -1px; background: var(--primary-grad); background-clip: text; -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+        .hamburger { background: none; border: none; color: white; font-size: 1.4rem; cursor: pointer; padding: 4px; }
+        .sidebar-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,.5); z-index: 998; }
+        .sidebar-overlay.active { display: block; }
+        @media (max-width:768px) {
+            .topbar { display: flex; }
+            .sidebar { transform: translateX(-100%); transition: transform .3s ease; padding-top: 1.5rem; }
+            .sidebar.open { transform: translateX(0); }
+            .main-content { margin-left: 0; padding-top: 5rem; }
+            .header-section { padding: 1.1rem; }
+            .content-body { padding: 1rem; }
+            .top-bar h1 { font-size: 2rem; }
+            .filter-tabs { overflow-x: auto; flex-wrap: nowrap; scrollbar-width: none; }
+            .filter-tabs::-webkit-scrollbar { display: none; }
+            .filter-tab { white-space: nowrap; flex-shrink: 0; }
+            .order-header { flex-direction: column; align-items: flex-start; gap: .8rem; }
+            .order-meta { flex-direction: column; gap: 1rem; width: 100%; }
+            .order-card .d-flex.align-items-center.justify-content-between { flex-direction: column; align-items: flex-start !important; gap: 1rem; }
+            .btn-pay-now { width: 100%; justify-content: center; margin-left: 0 !important; }
+            .floating-cart { bottom: 20px; right: 16px; padding: .8rem 1.2rem; }
+        }
     </style>
 </head>
 <body>
 
 <div class="topbar">
     <span class="topbar-logo">foodify.</span>
-
     <button class="hamburger" onclick="toggleSidebar()">
         <i class="bi bi-list" id="hamburgerIcon"></i>
     </button>
 </div>
 
-<div class="sidebar-overlay"
-     id="sidebarOverlay"
-     onclick="toggleSidebar()"></div>
+<div class="sidebar-overlay" id="sidebarOverlay" onclick="toggleSidebar()"></div>
 
 <div class="sidebar">
     <div class="sidebar-logo"><h2>foodify.</h2></div>
@@ -414,19 +248,16 @@ $count  = count($orders);
 
 <div class="main-content">
     <div class="d-flex justify-content-between align-items-end header-section">
-    <div class="top-bar">
-        <h1 class="page-title">My Orders</h1>
-        <p class="text-muted mb-0">
-            <?= $count ?> order<?= $count !== 1 ? 's' : '' ?> found
-        </p>
+        <div class="top-bar">
+            <h1 class="page-title">My Orders</h1>
+            <p class="text-muted mb-0"><?= $count ?> order<?= $count !== 1 ? 's' : '' ?> found</p>
+        </div>
     </div>
-</div>
 
     <div class="content-body">
-        <!-- Filter tabs -->
         <div class="filter-tabs">
             <?php
-            $tabs = ['all' => 'All', 'pending' => 'Pending', 'processing' => 'Processing', 'completed' => 'Completed'];
+            $tabs = ['all' => 'All', 'pending' => 'Pending', 'processing' => 'Processing', 'completed' => 'Completed', 'cancelled' => 'Cancelled'];
             foreach ($tabs as $val => $label):
                 $active = ($statusFilter === $val) ? 'active' : '';
             ?>
@@ -453,48 +284,48 @@ $count  = count($orders);
             <a href="order_detail.php?id=<?= $order['order_id'] ?>" class="order-card">
             <?php endif; ?>
 
-                    <div class="order-header">
-                        <div>
-                            <div class="order-id">Order #<?= str_pad($order['order_id'], 6, '0', STR_PAD_LEFT) ?></div>
-                            <div class="order-date"><?= date('d M Y, h:i A', strtotime($order['created_at'])) ?></div>
+                <div class="order-header">
+                    <div>
+                        <div class="order-id">Order #<?= str_pad($order['order_id'], 6, '0', STR_PAD_LEFT) ?></div>
+                        <div class="order-date"><?= date('d M Y, h:i A', strtotime($order['created_at'])) ?></div>
+                    </div>
+                    <span class="status-badge <?= $order['status'] ?>">
+                        <?= ucfirst($order['status']) ?>
+                    </span>
+                </div>
+
+                <hr class="order-divider">
+
+                <div class="d-flex align-items-center justify-content-between">
+                    <div class="order-meta" style="flex:1;">
+                        <div class="meta-item">
+                            <div class="label">Items</div>
+                            <div class="value"><?= $order['item_count'] ?> item<?= $order['item_count'] != 1 ? 's' : '' ?></div>
                         </div>
-                        <span class="status-badge <?= $order['status'] ?>">
-                            <?= ucfirst($order['status']) ?>
-                        </span>
+                        <div class="meta-item">
+                            <div class="label">Total</div>
+                            <div class="value price">RM <?= number_format($order['total_price'], 2) ?></div>
+                        </div>
+                        <div class="meta-item">
+                            <div class="label">Delivery</div>
+                            <div class="value"><?= $order['shipping_address'] === 'Self Pickup' ? 'Self Pickup' : 'Home Delivery' ?></div>
+                        </div>
+                        <div class="meta-item">
+                            <span class="pay-badge">
+                                <i class="bi <?= $order['method'] === 'cod' ? 'bi-cash-stack' : 'bi-bank' ?>"></i>
+                                <?= $order['method'] === 'cod' ? 'Cash on Delivery' : 'Online Banking' ?>
+                            </span>
+                        </div>
                     </div>
 
-                    <hr class="order-divider">
-
-                    <div class="d-flex align-items-center justify-content-between">
-                        <div class="order-meta" style="flex:1;">
-                            <div class="meta-item">
-                                <div class="label">Items</div>
-                                <div class="value"><?= $order['item_count'] ?> item<?= $order['item_count'] != 1 ? 's' : '' ?></div>
-                            </div>
-                            <div class="meta-item">
-                                <div class="label">Total</div>
-                                <div class="value price">RM <?= number_format($order['total_price'], 2) ?></div>
-                            </div>
-                            <div class="meta-item">
-                                <div class="label">Delivery</div>
-                                <div class="value"><?= $order['shipping_address'] === 'Self Pickup' ? 'Self Pickup' : 'Home Delivery' ?></div>
-                            </div>
-                            <div class="meta-item">
-                                <span class="pay-badge">
-                                    <i class="bi <?= $order['method'] === 'cod' ? 'bi-cash-stack' : 'bi-bank' ?>"></i>
-                                    <?= $order['method'] === 'cod' ? 'Cash on Delivery' : 'Online Banking' ?>
-                                </span>
-                            </div>
-                        </div>
-
-                        <?php if ($isPendingOnline): ?>
-                        <a href="https://toyyibpay.com/<?= htmlspecialchars($order['transaction_ref']) ?>"
-                           class="btn-pay-now ms-3"
-                           onclick="event.stopPropagation();">
-                            <i class="bi bi-lock-fill"></i> Pay Now
-                        </a>
-                        <?php endif; ?>
-                    </div>
+                    <?php if ($isPendingOnline): ?>
+                    <a href="https://toyyibpay.com/<?= htmlspecialchars($order['transaction_ref']) ?>"
+                       class="btn-pay-now ms-3"
+                       onclick="event.stopPropagation();">
+                        <i class="bi bi-lock-fill"></i> Pay Now
+                    </a>
+                    <?php endif; ?>
+                </div>
 
             <?php if ($isPendingOnline): ?>
             </div>
@@ -506,7 +337,6 @@ $count  = count($orders);
     </div>
 </div>
 
-<!-- Floating Bag Button -->
 <a href="../shop/cart.php" class="floating-cart position-fixed text-white text-decoration-none d-flex align-items-center gap-3">
     <i class="bi bi-bag-fill fs-5"></i>
     <span class="fw-bold small">Bag
@@ -515,28 +345,20 @@ $count  = count($orders);
         <?php endif; ?>
     </span>
 </a>
+
 <script>
 function toggleSidebar() {
     const sidebar = document.querySelector('.sidebar');
     const overlay = document.getElementById('sidebarOverlay');
     const icon = document.getElementById('hamburgerIcon');
-
     const isOpen = sidebar.classList.toggle('open');
-
     overlay.classList.toggle('active', isOpen);
-
-    icon.className = isOpen
-        ? 'bi bi-x-lg'
-        : 'bi bi-list';
+    icon.className = isOpen ? 'bi bi-x-lg' : 'bi bi-list';
 }
-
 document.querySelectorAll('.sidebar-nav a').forEach(link => {
     link.addEventListener('click', () => {
         const sidebar = document.querySelector('.sidebar');
-
-        if (sidebar.classList.contains('open')) {
-            toggleSidebar();
-        }
+        if (sidebar.classList.contains('open')) toggleSidebar();
     });
 });
 </script>
