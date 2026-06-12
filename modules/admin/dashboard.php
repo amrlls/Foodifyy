@@ -68,7 +68,6 @@ $recent_orders = $recent ? $recent->fetch_all(MYSQLI_ASSOC) : [];
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body { font-family: 'Plus Jakarta Sans', sans-serif; background: #F8F9FA; color: #1A1C1E; }
 
-        /* Sidebar */
         .sidebar {
             position: fixed; left: 0; top: 0; width: var(--sidebar-w); height: 100vh;
             background: var(--sidebar-dark); color: white;
@@ -86,169 +85,101 @@ $recent_orders = $recent ? $recent->fetch_all(MYSQLI_ASSOC) : [];
             margin-left: 1rem; font-size: 0.65rem; font-weight: 800;
             text-transform: uppercase; letter-spacing: 1px;
             background: var(--primary-grad); -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent; background-clip: text;
-            opacity: 0.8;
+            -webkit-text-fill-color: transparent; background-clip: text; opacity: 0.8;
         }
         .sidebar-greet-box { padding-left: 1rem; margin-bottom: 3rem; margin-top: 0; }
         .sidebar-greet-box p { color: #949494; font-size: 0.8rem; margin: 0; font-weight: 400; }
-
-        .nav-section-label {
-            font-size: 0.65rem; font-weight: 800; text-transform: uppercase;
-            letter-spacing: 1.5px; color: #555; padding: 0 18px;
-            margin: 1.2rem 0 0.3rem;
-        }
+        .nav-section-label { font-size: 0.65rem; font-weight: 800; text-transform: uppercase; letter-spacing: 1.5px; color: #555; padding: 0 18px; margin: 1.2rem 0 0.3rem; }
         .sidebar-nav { list-style: none; padding: 0; flex-grow: 1; }
         .sidebar-nav li { margin-bottom: 0.5rem; }
-        .sidebar-nav a {
-            display: flex; align-items: center; gap: 15px; padding: 14px 18px;
-            color: #949494; text-decoration: none; border-radius: 16px;
-            font-weight: 500; transition: all 0.3s ease;
-        }
+        .sidebar-nav a { display: flex; align-items: center; gap: 15px; padding: 14px 18px; color: #949494; text-decoration: none; border-radius: 16px; font-weight: 500; transition: all 0.3s ease; }
         .sidebar-nav a:hover { color: white; background: rgba(255,255,255,0.05); }
         .sidebar-nav a.active { background: var(--primary-grad); color: white; box-shadow: 0 10px 20px rgba(255,107,107,0.25); }
         .sidebar-nav a i { font-size: 1rem; width: 20px; text-align: center; }
-
         .sidebar::-webkit-scrollbar { display: none; }
-
         .sidebar-footer { padding-top: 2rem; border-top: 1px solid rgba(255,255,255,0.1); }
-        .user-card {
-            background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.08);
-            padding: 15px; border-radius: 20px; transition: all 0.2s ease; cursor: pointer;
-        }
+        .user-card { background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.08); padding: 15px; border-radius: 20px; transition: all 0.2s ease; cursor: pointer; }
         .user-card:hover { background: rgba(255,255,255,0.07); transform: translateY(-2px); }
 
-        /* Main */
         .main-content { margin-left: var(--sidebar-w); padding: 3rem 4rem; min-height: 100vh; }
 
-        /* Hero banner */
         .hero-banner {
             background: linear-gradient(135deg, #1A1C1E 0%, #2D3436 100%);
             border-radius: 28px; padding: 2.2rem 2.5rem; margin-bottom: 2rem;
             color: white; position: relative; overflow: hidden;
         }
-        .hero-banner::before {
-            content: ''; position: absolute; top: -40px; right: -40px;
-            width: 200px; height: 200px; border-radius: 50%;
-            background: rgba(255,107,107,0.08);
-        }
-        .hero-banner::after {
-            content: ''; position: absolute; bottom: -60px; right: 80px;
-            width: 150px; height: 150px; border-radius: 50%;
-            background: rgba(255,142,83,0.06);
-        }
+        .hero-banner::before { content: ''; position: absolute; top: -40px; right: -40px; width: 200px; height: 200px; border-radius: 50%; background: rgba(255,107,107,0.08); }
+        .hero-banner::after { content: ''; position: absolute; bottom: -60px; right: 80px; width: 150px; height: 150px; border-radius: 50%; background: rgba(255,142,83,0.06); }
 
-        /* Stat cards */
-        .stat-card {
-            background: white; border-radius: 22px; padding: 1.5rem;
-            border: 1px solid rgba(0,0,0,0.04);
-            box-shadow: 0 4px 20px rgba(0,0,0,0.04);
-            transition: 0.3s; height: 100%;
-        }
+        .stat-card { background: white; border-radius: 22px; padding: 1.5rem; border: 1px solid rgba(0,0,0,0.04); box-shadow: 0 4px 20px rgba(0,0,0,0.04); transition: 0.3s; height: 100%; }
         .stat-card:hover { transform: translateY(-4px); box-shadow: 0 16px 40px rgba(0,0,0,0.08); }
-        .stat-icon {
-            width: 52px; height: 52px; border-radius: 16px;
-            display: flex; align-items: center; justify-content: center; font-size: 1.4rem;
-        }
+        .stat-icon { width: 52px; height: 52px; border-radius: 16px; display: flex; align-items: center; justify-content: center; font-size: 1.4rem; }
         .stat-label { font-size: 0.72rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.8px; color: #bdc3c7; margin-bottom: 6px; }
         .stat-value { font-size: 2rem; font-weight: 900; color: #1A1C1E; line-height: 1; }
-        .stat-value.gradient {
-            background: var(--primary-grad); background-clip: text;
-            -webkit-background-clip: text; -webkit-text-fill-color: transparent;
-        }
+        .stat-value.gradient { background: var(--primary-grad); background-clip: text; -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
 
-        /* Sales overview */
-        .section-card {
-            background: white; border-radius: 22px; padding: 1.8rem;
-            border: 1px solid rgba(0,0,0,0.04);
-            box-shadow: 0 4px 20px rgba(0,0,0,0.04); margin-bottom: 1.5rem;
-        }
+        .section-card { background: white; border-radius: 22px; padding: 1.8rem; border: 1px solid rgba(0,0,0,0.04); box-shadow: 0 4px 20px rgba(0,0,0,0.04); margin-bottom: 1.5rem; }
         .section-card h5 { font-weight: 800; font-size: 1rem; margin-bottom: 1.5rem; }
-        .sales-box {
-            background: #f8f9fa; border-radius: 16px; padding: 1.2rem;
-            text-align: center;
-        }
+        .sales-box { background: #f8f9fa; border-radius: 16px; padding: 1.2rem; text-align: center; }
         .sales-box .label { font-size: 0.75rem; color: #bdc3c7; font-weight: 700; text-transform: uppercase; margin-bottom: 6px; }
         .sales-box .amount { font-size: 1.5rem; font-weight: 900; }
 
-        /* Alert card */
-        .alert-card {
-            background: white; border-radius: 22px; padding: 1.8rem;
-            border-left: 4px solid #FF9800;
-            box-shadow: 0 4px 20px rgba(0,0,0,0.04); margin-bottom: 1.5rem;
-        }
+        .alert-card { background: white; border-radius: 22px; padding: 1.8rem; border-left: 4px solid #FF9800; box-shadow: 0 4px 20px rgba(0,0,0,0.04); margin-bottom: 1.5rem; }
         .stock-item {
             display: flex; justify-content: space-between; align-items: center;
-            padding: 0.6rem 0.8rem; background: #f8f9fa; border-radius: 12px;
+            padding: 0.9rem 1rem; background: #fffbf5;
+            border-radius: 14px; border: 1px solid rgba(255,152,0,0.15);
+            transition: 0.2s;
         }
+        .stock-item:hover { background: #fff3e0; transform: translateY(-1px); box-shadow: 0 4px 12px rgba(255,152,0,0.1); }
+        .stock-item .item-name { font-weight: 700; font-size: 0.88rem; color: #1A1C1E; }
+        .stock-item .stock-pill {
+            display: inline-flex; align-items: center; gap: 5px;
+            padding: 4px 12px; border-radius: 100px; font-size: 0.75rem; font-weight: 800;
+        }
+        .stock-pill.critical { background: rgba(214,48,49,0.12); color: #d63031; }
+        .stock-pill.low      { background: rgba(253,203,110,0.25); color: #e17055; }
+        .stock-pill.ok       { background: rgba(46,204,113,0.12);  color: #27ae60; }
 
-        /* Order cards */
-        .order-card {
-            background: white; border-radius: 16px; padding: 1rem 1.2rem;
-            border: 1px solid #f0f0f0; margin-bottom: 0.6rem; transition: 0.2s;
-        }
+        .order-card { background: white; border-radius: 16px; padding: 1rem 1.2rem; border: 1px solid #f0f0f0; margin-bottom: 0.6rem; transition: 0.2s; }
         .order-card:hover { box-shadow: 0 8px 20px rgba(0,0,0,0.06); transform: translateY(-1px); }
 
+        /* ── STATUS BADGES — same as manage_orders ── */
         .status-badge {
-            padding: 4px 12px;
-            border-radius: 20px;
-            font-size: 0.7rem;
-            font-weight: 700;
-            display: inline-flex;
-            align-items: center;
-            justify-content: center;
-            gap: 6px;
-            text-transform: uppercase;
-            width: 110px;
+            padding: 4px 12px; border-radius: 20px; font-size: 0.7rem; font-weight: 700;
+            display: inline-flex; align-items: center; justify-content: center;
+            gap: 6px; text-transform: uppercase; min-width: 110px;
         }
+        .status-badge::before { content: ''; width: 8px; height: 8px; border-radius: 50%; background: currentColor; flex-shrink: 0; }
+        .status-pending    { background: rgba(116,185,255,0.15) !important; color: #0984e3 !important; }
+        .status-processing { background: rgba(253,203,110,0.2)  !important; color: #e17055 !important; }
+        .status-completed  { background: rgba(46,204,113,0.12)  !important; color: #27ae60 !important; }
+        .status-cancelled  { background: rgba(214,48,49,0.12)   !important; color: #d63031 !important; }
 
-        .status-badge::before {
-            content: '';
-            width: 8px;
-            height: 8px;
-            border-radius: 50%;
-            background: currentColor;
-            flex-shrink: 0;
-        }
-
-        .status-pending    { background: rgba(116,185,255,0.15); color: #0984e3; }
-        .status-processing { background: rgba(253,203,110,0.2);  color: #e17055; }
-        .status-completed  { background: rgba(46, 204, 113, 0.12);color: #27ae60;}
-
-        .btn-view {
-            background: #1A1C1E; color: white; padding: 6px 16px;
-            border-radius: 10px; font-size: 0.75rem; font-weight: 700;
-            text-decoration: none; display: inline-block; transition: 0.2s;
-        }
+        .btn-view { background: #1A1C1E; color: white; padding: 6px 16px; border-radius: 10px; font-size: 0.75rem; font-weight: 700; text-decoration: none; display: inline-block; transition: 0.2s; }
         .btn-view:hover { background: var(--accent); color: white; }
 
         .section-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; }
         .section-header h5 { font-weight: 800; margin: 0; }
-
     </style>
 </head>
 <body>
 
-<!-- Sidebar -->
 <div class="sidebar">
     <div class="sidebar-logo">
         <h2>foodify.</h2>
         <div class="admin-badge">Admin Panel</div>
     </div>
-    <div class="sidebar-greet-box">
-        <p>System control center</p>
-    </div>
-
+    <div class="sidebar-greet-box"><p>System control center</p></div>
     <ul class="sidebar-nav">
         <div class="nav-section-label">Overview</div>
         <li><a href="dashboard.php" class="active"><i class="bi bi-grid-fill"></i> Dashboard</a></li>
-
         <div class="nav-section-label">Manage</div>
         <li><a href="manage_items.php"><i class="bi bi-bag-heart-fill"></i> Manage Items</a></li>
         <li><a href="manage_orders.php"><i class="bi bi-receipt"></i> Manage Orders</a></li>
         <li><a href="manage_users.php"><i class="bi bi-people-fill"></i> Manage Users</a></li>
         <li><a href="manage_recipes.php"><i class="bi bi-book-fill"></i> Manage Recipes</a></li>
     </ul>
-
     <div class="sidebar-footer">
         <a href="../admin/profile.php" class="text-decoration-none d-block">
             <div class="user-card d-flex align-items-center gap-3 mb-3">
@@ -272,10 +203,8 @@ $recent_orders = $recent ? $recent->fetch_all(MYSQLI_ASSOC) : [];
     </div>
 </div>
 
-<!-- Main Content -->
 <div class="main-content">
 
-    <!-- Hero -->
     <div class="hero-banner">
         <div class="d-flex justify-content-between align-items-center">
             <div>
@@ -289,119 +218,76 @@ $recent_orders = $recent ? $recent->fetch_all(MYSQLI_ASSOC) : [];
         </div>
     </div>
 
-    <!-- Stats Row 1 -->
     <div class="row g-3 mb-3">
         <div class="col-md-3">
             <div class="stat-card">
                 <div class="d-flex justify-content-between align-items-start">
-                    <div>
-                        <div class="stat-label">Total Users</div>
-                        <div class="stat-value"><?= $total_users ?></div>
-                    </div>
-                    <div class="stat-icon" style="background:rgba(116,185,255,0.15);color:#0984e3;">
-                        <i class="bi bi-people-fill"></i>
-                    </div>
+                    <div><div class="stat-label">Total Users</div><div class="stat-value"><?= $total_users ?></div></div>
+                    <div class="stat-icon" style="background:rgba(116,185,255,0.15);color:#0984e3;"><i class="bi bi-people-fill"></i></div>
                 </div>
             </div>
         </div>
         <div class="col-md-3">
             <div class="stat-card">
                 <div class="d-flex justify-content-between align-items-start">
-                    <div>
-                        <div class="stat-label">Staff</div>
-                        <div class="stat-value"><?= $total_staff ?></div>
-                    </div>
-                    <div class="stat-icon" style="background:rgba(162,155,254,0.15);color:#6c5ce7;">
-                        <i class="bi bi-person-badge-fill"></i>
-                    </div>
+                    <div><div class="stat-label">Staff</div><div class="stat-value"><?= $total_staff ?></div></div>
+                    <div class="stat-icon" style="background:rgba(162,155,254,0.15);color:#6c5ce7;"><i class="bi bi-person-badge-fill"></i></div>
                 </div>
             </div>
         </div>
         <div class="col-md-3">
             <div class="stat-card">
                 <div class="d-flex justify-content-between align-items-start">
-                    <div>
-                        <div class="stat-label">Recipes</div>
-                        <div class="stat-value"><?= $total_recipes ?></div>
-                    </div>
-                    <div class="stat-icon" style="background:rgba(253,203,110,0.2);color:#e17055;">
-                        <i class="bi bi-book-fill"></i>
-                    </div>
+                    <div><div class="stat-label">Recipes</div><div class="stat-value"><?= $total_recipes ?></div></div>
+                    <div class="stat-icon" style="background:rgba(253,203,110,0.2);color:#e17055;"><i class="bi bi-book-fill"></i></div>
                 </div>
             </div>
         </div>
         <div class="col-md-3">
             <div class="stat-card">
                 <div class="d-flex justify-content-between align-items-start">
-                    <div>
-                        <div class="stat-label">Total Orders</div>
-                        <div class="stat-value"><?= $total_orders ?></div>
-                    </div>
-                    <div class="stat-icon" style="background:rgba(255,107,107,0.12);color:#FF6B6B;">
-                        <i class="bi bi-receipt"></i>
-                    </div>
+                    <div><div class="stat-label">Total Orders</div><div class="stat-value"><?= $total_orders ?></div></div>
+                    <div class="stat-icon" style="background:rgba(255,107,107,0.12);color:#FF6B6B;"><i class="bi bi-receipt"></i></div>
                 </div>
             </div>
         </div>
     </div>
 
-    <!-- Stats Row 2 -->
     <div class="row g-3 mb-3">
         <div class="col-md-3">
             <div class="stat-card">
                 <div class="d-flex justify-content-between align-items-start">
-                    <div>
-                        <div class="stat-label">Total Items</div>
-                        <div class="stat-value"><?= $total_items ?></div>
-                    </div>
-                    <div class="stat-icon" style="background:rgba(0,184,148,0.12);color:#00b894;">
-                        <i class="bi bi-bag-heart-fill"></i>
-                    </div>
+                    <div><div class="stat-label">Total Items</div><div class="stat-value"><?= $total_items ?></div></div>
+                    <div class="stat-icon" style="background:rgba(0,184,148,0.12);color:#00b894;"><i class="bi bi-bag-heart-fill"></i></div>
                 </div>
             </div>
         </div>
         <div class="col-md-3">
             <div class="stat-card">
                 <div class="d-flex justify-content-between align-items-start">
-                    <div>
-                        <div class="stat-label">Total Sales</div>
-                        <div class="stat-value gradient" style="font-size:1.4rem;">RM <?= number_format($total_sales, 2) ?></div>
-                    </div>
-                    <div class="stat-icon" style="background:rgba(255,142,83,0.12);color:#FF8E53;">
-                        <i class="bi bi-cash-stack"></i>
-                    </div>
+                    <div><div class="stat-label">Total Sales</div><div class="stat-value gradient" style="font-size:1.4rem;">RM <?= number_format($total_sales, 2) ?></div></div>
+                    <div class="stat-icon" style="background:rgba(255,142,83,0.12);color:#FF8E53;"><i class="bi bi-cash-stack"></i></div>
                 </div>
             </div>
         </div>
         <div class="col-md-3">
             <div class="stat-card">
                 <div class="d-flex justify-content-between align-items-start">
-                    <div>
-                        <div class="stat-label">Pending Orders</div>
-                        <div class="stat-value"><?= $pending_orders ?></div>
-                    </div>
-                    <div class="stat-icon" style="background:rgba(116,185,255,0.12);color:#0984e3;">
-                        <i class="bi bi-hourglass-split"></i>
-                    </div>
+                    <div><div class="stat-label">Pending Orders</div><div class="stat-value"><?= $pending_orders ?></div></div>
+                    <div class="stat-icon" style="background:rgba(116,185,255,0.12);color:#0984e3;"><i class="bi bi-hourglass-split"></i></div>
                 </div>
             </div>
         </div>
         <div class="col-md-3">
             <div class="stat-card">
                 <div class="d-flex justify-content-between align-items-start">
-                    <div>
-                        <div class="stat-label">Today's Orders</div>
-                        <div class="stat-value"><?= $today_orders ?></div>
-                    </div>
-                    <div class="stat-icon" style="background:rgba(253,203,110,0.15);color:#fdcb6e;">
-                        <i class="bi bi-calendar-day"></i>
-                    </div>
+                    <div><div class="stat-label">Today's Orders</div><div class="stat-value"><?= $today_orders ?></div></div>
+                    <div class="stat-icon" style="background:rgba(253,203,110,0.15);color:#fdcb6e;"><i class="bi bi-calendar-day"></i></div>
                 </div>
             </div>
         </div>
     </div>
 
-    <!-- Sales Overview -->
     <div class="section-card">
         <h5><i class="bi bi-graph-up me-2"></i>Sales Overview</h5>
         <div class="row g-3">
@@ -426,19 +312,27 @@ $recent_orders = $recent ? $recent->fetch_all(MYSQLI_ASSOC) : [];
         </div>
     </div>
 
-    <!-- Low Stock Alert -->
     <?php if (!empty($low_stock_items)): ?>
+    <div class="section-header" style="margin-bottom:1rem;">
+        <h5><i class="bi bi-exclamation-triangle text-warning me-2"></i>Low Stock Alert</h5>
+        <a href="manage_items.php" class="btn-view">Manage Items →</a>
+    </div>
     <div class="alert-card">
-        <div class="d-flex justify-content-between align-items-center mb-3">
-            <h5 class="fw-bold mb-0"><i class="bi bi-exclamation-triangle text-warning me-2"></i>Low Stock Alert</h5>
-            <a href="manage_items.php" class="btn-view">Manage Items →</a>
-        </div>
         <div class="row g-2">
-            <?php foreach ($low_stock_items as $item): ?>
+            <?php foreach ($low_stock_items as $item):
+                $pillClass = $item['stock'] <= 3 ? 'critical' : ($item['stock'] <= 6 ? 'low' : 'ok');
+                $pillIcon  = $item['stock'] <= 3 ? 'bi-exclamation-circle-fill' : ($item['stock'] <= 6 ? 'bi-dash-circle-fill' : 'bi-check-circle-fill');
+            ?>
             <div class="col-md-4">
                 <div class="stock-item">
-                    <span class="fw-600"><?= htmlspecialchars($item['name']) ?></span>
-                    <span class="fw-bold text-warning">Stock: <?= $item['stock'] ?> <?= $item['unit'] ?></span>
+                    <div class="d-flex align-items-center gap-2">
+                        <i class="bi bi-bag-heart" style="color:#FF8E53;font-size:1rem;"></i>
+                        <span class="item-name"><?= htmlspecialchars($item['name']) ?></span>
+                    </div>
+                    <span class="stock-pill <?= $pillClass ?>">
+                        <i class="bi <?= $pillIcon ?>"></i>
+                        <?= $item['stock'] ?>
+                    </span>
                 </div>
             </div>
             <?php endforeach; ?>
@@ -446,7 +340,6 @@ $recent_orders = $recent ? $recent->fetch_all(MYSQLI_ASSOC) : [];
     </div>
     <?php endif; ?>
 
-    <!-- Recent Orders -->
     <div class="section-header">
         <h5>Recent Orders</h5>
         <a href="manage_orders.php" class="btn-view">Manage Orders →</a>
@@ -457,6 +350,7 @@ $recent_orders = $recent ? $recent->fetch_all(MYSQLI_ASSOC) : [];
             'pending'    => 'status-pending',
             'processing' => 'status-processing',
             'completed'  => 'status-completed',
+            'cancelled'  => 'status-cancelled',
             default      => 'status-pending'
         };
     ?>

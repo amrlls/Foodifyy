@@ -27,13 +27,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
     header('Content-Type: application/json');
     $orderId   = intval($_POST['order_id'] ?? 0);
     $newStatus = $_POST['status'] ?? '';
-    if (in_array($newStatus, ['pending', 'processing', 'completed'])) {
+    if (in_array($newStatus, ['pending', 'processing', 'completed', 'cancelled'])) {
         $stmt = $conn->prepare("UPDATE orders SET status = ? WHERE order_id = ?");
         $stmt->bind_param("si", $newStatus, $orderId);
         $stmt->execute();
 
         if ($newStatus === 'completed') {
             $stmtPay = $conn->prepare("UPDATE payments SET status = 'success', paid_at = NOW() WHERE order_id = ? AND status != 'success'");
+            $stmtPay->bind_param("i", $orderId);
+            $stmtPay->execute();
+        }
+        if ($newStatus === 'cancelled') {
+            $stmtPay = $conn->prepare("UPDATE payments SET status = 'failed' WHERE order_id = ? AND status != 'success'");
             $stmtPay->bind_param("i", $orderId);
             $stmtPay->execute();
         }
@@ -46,9 +51,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
 }
 
 // Filters
-$search        = trim($_GET['search'] ?? '');
-$statusFilter  = $_GET['status'] ?? 'all';
-$dateFilter    = $_GET['date_filter'] ?? 'all';
+$search       = trim($_GET['search'] ?? '');
+$statusFilter = $_GET['status'] ?? 'all';
+$dateFilter   = $_GET['date_filter'] ?? 'all';
 
 $where  = ["1=1"];
 $params = [];
@@ -91,10 +96,10 @@ $orders = $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
 $count  = count($orders);
 
 // Stats
-$total_orders      = $conn->query("SELECT COUNT(*) as t FROM orders")->fetch_assoc()['t'] ?? 0;
-$pending_count     = $conn->query("SELECT COUNT(*) as t FROM orders WHERE status='pending'")->fetch_assoc()['t'] ?? 0;
-$processing_count  = $conn->query("SELECT COUNT(*) as t FROM orders WHERE status='processing'")->fetch_assoc()['t'] ?? 0;
-$completed_count   = $conn->query("SELECT COUNT(*) as t FROM orders WHERE status='completed'")->fetch_assoc()['t'] ?? 0;
+$total_orders     = $conn->query("SELECT COUNT(*) as t FROM orders")->fetch_assoc()['t'] ?? 0;
+$pending_count    = $conn->query("SELECT COUNT(*) as t FROM orders WHERE status='pending'")->fetch_assoc()['t'] ?? 0;
+$processing_count = $conn->query("SELECT COUNT(*) as t FROM orders WHERE status='processing'")->fetch_assoc()['t'] ?? 0;
+$completed_count  = $conn->query("SELECT COUNT(*) as t FROM orders WHERE status='completed'")->fetch_assoc()['t'] ?? 0;
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -156,7 +161,6 @@ $completed_count   = $conn->query("SELECT COUNT(*) as t FROM orders WHERE status
         .order-row.header > div:nth-child(1), .order-row.header > div:nth-child(2) { text-align: left; }
 
         .order-id { font-weight: 800; font-size: 0.88rem; color: #1A1C1E; }
-        .order-customer { font-size: 0.75rem; color: #bdc3c7; margin-top: 2px; }
         .order-amount { font-weight: 800; font-size: 0.9rem; background: var(--primary-grad); background-clip: text; -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
 
         .status-badge { display: inline-flex; align-items: center; justify-content: center; gap: 6px; padding: 4px 14px; border-radius: 100px; font-size: 0.7rem; font-weight: 700; text-transform: uppercase; min-width: 100px; }
@@ -164,6 +168,7 @@ $completed_count   = $conn->query("SELECT COUNT(*) as t FROM orders WHERE status
         .status-pending    { background: rgba(116,185,255,0.15); color: #0984e3; }
         .status-processing { background: rgba(253,203,110,0.2);  color: #e17055; }
         .status-completed  { background: rgba(46,204,113,0.12);  color: #27ae60; }
+        .status-cancelled  { background: rgba(214,48,49,0.12);   color: #d63031; }
 
         .pay-badge { display: inline-flex; align-items: center; gap: 5px; padding: 4px 12px; border-radius: 100px; font-size: 0.7rem; font-weight: 700; }
         .pay-cod     { background: rgba(108,92,231,0.12); color: #6c5ce7; }
@@ -171,7 +176,6 @@ $completed_count   = $conn->query("SELECT COUNT(*) as t FROM orders WHERE status
         .pay-success { background: rgba(46,204,113,0.12); color: #27ae60; }
         .pay-failed  { background: rgba(225,112,85,0.12); color: #e17055; }
 
-        .action-btns { display: flex; gap: 6px; justify-content: center; }
         .btn-view-order { padding: 6px 14px; border-radius: 10px; border: 1.5px solid #eee; background: white; color: #1A1C1E; font-size: 0.75rem; font-weight: 700; cursor: pointer; transition: 0.2s; display: inline-flex; align-items: center; gap: 5px; text-decoration: none; }
         .btn-view-order:hover { background: #1A1C1E; color: white; border-color: #1A1C1E; }
 
@@ -181,13 +185,7 @@ $completed_count   = $conn->query("SELECT COUNT(*) as t FROM orders WHERE status
 
         .detail-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.5); backdrop-filter: blur(6px); z-index: 9998; display: none; }
         .detail-overlay.active { display: block; }
-        .detail-panel {
-            position: fixed; right: -520px; top: 0; width: 500px; height: 100vh;
-            background: white; z-index: 9999; overflow-y: auto;
-            box-shadow: -20px 0 60px rgba(0,0,0,0.15);
-            transition: right 0.35s cubic-bezier(0.34,1.06,0.64,1);
-            padding: 2rem;
-        }
+        .detail-panel { position: fixed; right: -520px; top: 0; width: 500px; height: 100vh; background: white; z-index: 9999; overflow-y: auto; box-shadow: -20px 0 60px rgba(0,0,0,0.15); transition: right 0.35s cubic-bezier(0.34,1.06,0.64,1); padding: 2rem; }
         .detail-panel.open { right: 0; }
         .detail-panel::-webkit-scrollbar { width: 4px; }
         .detail-panel::-webkit-scrollbar-thumb { background: #eee; border-radius: 4px; }
@@ -203,6 +201,9 @@ $completed_count   = $conn->query("SELECT COUNT(*) as t FROM orders WHERE status
         .info-row .lbl { color: #7f8c8d; font-weight: 600; }
         .info-row .val { font-weight: 700; color: #1A1C1E; }
         .info-row .val.accent { background: var(--primary-grad); background-clip: text; -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+        .pay-status-success { font-weight: 700; color: #27ae60; background: rgba(46,204,113,0.12); padding: 3px 10px; border-radius: 100px; font-size: 0.8rem; }
+        .pay-status-pending  { font-weight: 700; color: #0984e3; background: rgba(116,185,255,0.15); padding: 3px 10px; border-radius: 100px; font-size: 0.8rem; }
+        .pay-status-failed   { font-weight: 700; color: #d63031; background: rgba(214,48,49,0.12); padding: 3px 10px; border-radius: 100px; font-size: 0.8rem; }
 
         .item-line { display: flex; justify-content: space-between; align-items: center; padding: 0.5rem 0; border-bottom: 1px solid #eee; font-size: 0.85rem; }
         .item-line:last-child { border-bottom: none; }
@@ -264,14 +265,12 @@ $completed_count   = $conn->query("SELECT COUNT(*) as t FROM orders WHERE status
         <h4 id="panelOrderId">Order Details</h4>
         <button class="btn-close-panel" onclick="closePanel()"><i class="bi bi-x-lg"></i></button>
     </div>
-
     <div class="info-section">
         <h6>Customer Info</h6>
         <div class="info-row"><span class="lbl">Name</span><span class="val" id="dShippingName">-</span></div>
         <div class="info-row"><span class="lbl">Phone</span><span class="val" id="dShippingPhone">-</span></div>
         <div class="info-row"><span class="lbl">Address</span><span class="val" id="dShippingAddress" style="text-align:right;max-width:60%;">-</span></div>
     </div>
-
     <div class="info-section">
         <h6>Order Info</h6>
         <div class="info-row"><span class="lbl">Order Date</span><span class="val" id="dCreatedAt">-</span></div>
@@ -280,18 +279,17 @@ $completed_count   = $conn->query("SELECT COUNT(*) as t FROM orders WHERE status
         <div class="info-row"><span class="lbl">Delivery Fee</span><span class="val" id="dDeliveryFee">-</span></div>
         <div class="info-row"><span class="lbl">Total</span><span class="val accent" id="dTotal">-</span></div>
     </div>
-
     <div class="info-section">
         <h6>Order Items</h6>
         <div id="dItems"><span style="color:#bdc3c7;font-size:0.85rem;">Loading...</span></div>
     </div>
-
     <div class="info-section">
         <h6>Update Status</h6>
         <select id="dStatusSelect" class="status-select">
             <option value="pending">Pending</option>
             <option value="processing">Processing</option>
             <option value="completed">Completed</option>
+            <option value="cancelled">Cancelled</option>
         </select>
         <button class="btn-update-status" onclick="updateStatus()">
             <i class="bi bi-check-lg me-2"></i>Update Status
@@ -311,7 +309,6 @@ $completed_count   = $conn->query("SELECT COUNT(*) as t FROM orders WHERE status
     <div class="alert-toast success"><i class="bi bi-check-circle-fill me-2"></i> Order status updated!</div>
     <?php endif; ?>
 
-    <!-- Stats -->
     <div class="stat-row">
         <div class="stat-card">
             <div><div class="label">Total Orders</div><div class="value"><?= $total_orders ?></div></div>
@@ -342,6 +339,7 @@ $completed_count   = $conn->query("SELECT COUNT(*) as t FROM orders WHERE status
                 <option value="pending"    <?= $statusFilter === 'pending'    ? 'selected' : '' ?>>Pending</option>
                 <option value="processing" <?= $statusFilter === 'processing' ? 'selected' : '' ?>>Processing</option>
                 <option value="completed"  <?= $statusFilter === 'completed'  ? 'selected' : '' ?>>Completed</option>
+                <option value="cancelled"  <?= $statusFilter === 'cancelled'  ? 'selected' : '' ?>>Cancelled</option>
             </select>
             <select name="date_filter" class="filter-select" onchange="document.getElementById('filterForm').submit()">
                 <option value="all"   <?= $dateFilter === 'all'   ? 'selected' : '' ?>>All Time</option>
@@ -366,6 +364,7 @@ $completed_count   = $conn->query("SELECT COUNT(*) as t FROM orders WHERE status
                 'pending'    => 'status-pending',
                 'processing' => 'status-processing',
                 'completed'  => 'status-completed',
+                'cancelled'  => 'status-cancelled',
                 default      => 'status-pending'
             };
             $payClass = 'pay-online';
@@ -375,12 +374,8 @@ $completed_count   = $conn->query("SELECT COUNT(*) as t FROM orders WHERE status
             $payLabel = $order['payment_method'] === 'cod' ? 'COD' : 'Online Banking';
         ?>
         <div class="order-row" onclick="openPanel(<?= htmlspecialchars(json_encode($order)) ?>)">
-            <div>
-                <div class="order-id">#<?= str_pad($order['order_id'], 6, '0', STR_PAD_LEFT) ?></div>
-            </div>
-            <div>
-                <div style="font-weight:700;font-size:0.88rem;"><?= htmlspecialchars($order['shipping_name'] ?? $order['customer_name']) ?></div>
-            </div>
+            <div><div class="order-id">#<?= str_pad($order['order_id'], 6, '0', STR_PAD_LEFT) ?></div></div>
+            <div><div style="font-weight:700;font-size:0.88rem;"><?= htmlspecialchars($order['shipping_name'] ?? $order['customer_name']) ?></div></div>
             <div><span class="order-amount">RM <?= number_format($order['total_price'], 2) ?></span></div>
             <div><span class="status-badge <?= $statusClass ?>"><?= ucfirst($order['status']) ?></span></div>
             <div><span class="pay-badge <?= $payClass ?>"><?= $payLabel ?></span></div>
@@ -401,11 +396,7 @@ $completed_count   = $conn->query("SELECT COUNT(*) as t FROM orders WHERE status
 let currentOrderId = null;
 
 document.querySelectorAll('.alert-toast').forEach(el => {
-    setTimeout(() => {
-        el.style.transition = 'opacity 0.5s';
-        el.style.opacity = '0';
-        setTimeout(() => el.remove(), 500);
-    }, 3000);
+    setTimeout(() => { el.style.transition = 'opacity 0.5s'; el.style.opacity = '0'; setTimeout(() => el.remove(), 500); }, 3000);
 });
 
 const searchInput = document.getElementById('searchInput');
@@ -418,20 +409,23 @@ if (searchInput) {
 
 function openPanel(order) {
     currentOrderId = order.order_id;
+    document.getElementById('panelOrderId').textContent     = 'Order #' + String(order.order_id).padStart(6, '0');
+    document.getElementById('dShippingName').textContent    = order.shipping_name || '-';
+    document.getElementById('dShippingPhone').textContent   = order.shipping_phone || '-';
+    document.getElementById('dShippingAddress').textContent = order.shipping_address || '-';
+    document.getElementById('dCreatedAt').textContent       = new Date(order.created_at).toLocaleString('en-MY');
+    document.getElementById('dPaymentMethod').textContent   = order.payment_method === 'cod' ? 'Cash on Delivery' : 'Online Banking';
 
-    document.getElementById('panelOrderId').textContent       = 'Order #' + String(order.order_id).padStart(6, '0');
-    document.getElementById('dShippingName').textContent      = order.shipping_name || '-';
-    document.getElementById('dShippingPhone').textContent     = order.shipping_phone || '-';
-    document.getElementById('dShippingAddress').textContent   = order.shipping_address || '-';
-    document.getElementById('dCreatedAt').textContent         = new Date(order.created_at).toLocaleString('en-MY');
-    document.getElementById('dPaymentMethod').textContent     = order.payment_method === 'cod' ? 'Cash on Delivery' : 'Online Banking';
-    document.getElementById('dPaymentStatus').textContent     = order.payment_status ? order.payment_status.charAt(0).toUpperCase() + order.payment_status.slice(1) : '-';
-    document.getElementById('dDeliveryFee').textContent       = 'RM ' + parseFloat(order.delivery_fee || 0).toFixed(2);
-    document.getElementById('dTotal').textContent             = 'RM ' + parseFloat(order.total_price).toFixed(2);
-    document.getElementById('dStatusSelect').value            = order.status;
+    const payStatus = order.payment_status ? order.payment_status.toLowerCase() : 'pending';
+    const payStatusEl = document.getElementById('dPaymentStatus');
+    payStatusEl.textContent = payStatus.charAt(0).toUpperCase() + payStatus.slice(1);
+    payStatusEl.className = 'pay-status-' + payStatus;
+
+    document.getElementById('dDeliveryFee').textContent = 'RM ' + parseFloat(order.delivery_fee || 0).toFixed(2);
+    document.getElementById('dTotal').textContent       = 'RM ' + parseFloat(order.total_price).toFixed(2);
+    document.getElementById('dStatusSelect').value      = order.status;
 
     loadOrderItems(order.order_id);
-
     document.getElementById('detailOverlay').classList.add('active');
     document.getElementById('detailPanel').classList.add('open');
 }
@@ -475,9 +469,15 @@ async function updateStatus() {
     const data = await res.json();
     if (data.status === 'success') {
         if (newStatus === 'completed') {
-            document.getElementById('dPaymentStatus').textContent = 'Success';
+            const payEl = document.getElementById('dPaymentStatus');
+            payEl.textContent = 'Success';
+            payEl.className = 'pay-status-success';
         }
-
+        if (newStatus === 'cancelled') {
+            const payEl = document.getElementById('dPaymentStatus');
+            payEl.textContent = 'Failed';
+            payEl.className = 'pay-status-failed';
+        }
         document.querySelectorAll('.order-row').forEach(row => {
             const onclick = row.getAttribute('onclick') || '';
             if (onclick.includes('"order_id":' + currentOrderId) || onclick.includes('"order_id":"' + currentOrderId + '"')) {
@@ -488,19 +488,12 @@ async function updateStatus() {
                 }
             }
         });
-
         closePanel();
-
         const toast = document.createElement('div');
         toast.className = 'alert-toast success';
         toast.innerHTML = '<i class="bi bi-check-circle-fill me-2"></i> Order status updated!';
         document.querySelector('.main-content').prepend(toast);
-        setTimeout(() => {
-            toast.style.transition = 'opacity 0.5s';
-            toast.style.opacity = '0';
-            setTimeout(() => toast.remove(), 500);
-        }, 3000);
-
+        setTimeout(() => { toast.style.transition = 'opacity 0.5s'; toast.style.opacity = '0'; setTimeout(() => toast.remove(), 500); }, 3000);
         setTimeout(() => location.reload(), 1000);
     }
 }

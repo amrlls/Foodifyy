@@ -264,7 +264,7 @@ $categories = $conn->query("SELECT DISTINCT category FROM items ORDER BY categor
 
 <!-- Item Modal -->
 <div class="modal fade" id="itemModal" tabindex="-1">
-    <div class="modal-dialog modal-dialog-centered modal-lg">
+    <div class="modal-dialog modal-dialog-centered" style="max-width:560px;">
         <div class="modal-content">
             <div class="modal-header border-0 pb-0">
                 <h3 class="fw-bold" id="itemModalTitle">Add New Item</h3>
